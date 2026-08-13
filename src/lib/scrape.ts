@@ -131,7 +131,7 @@ export async function scrapeSequentially(name: string): Promise<SequentialScrape
     }
     if (extra.bgmSubjectId != null) data.bgmSubjectId = extra.bgmSubjectId
   }
-  return { success: true, source: result.source, sourcesTried, data }
+  return { success: true, source: result.source ?? null, sourcesTried, data }
 }
 
 // ============ 会社游戏列表（模块 258 的 fetchCompanyGames） ============
