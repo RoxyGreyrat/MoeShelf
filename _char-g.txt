@@ -1,0 +1,2 @@
+RAW: function g(e){return(e||"").toLowerCase().replace(/[\s·・・\u3000-]/g,"")}var f=r(644);let v
+ESC: function g(e){return(e||"").toLowerCase().replace(/[\s\u00b7\u30fb\u30fb\u3000-]/g,"")}var f=r(644);let v

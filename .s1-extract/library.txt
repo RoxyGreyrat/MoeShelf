@@ -1,0 +1,174 @@
+"use strict";
+(()=>{
+var t={};
+t.id=22,t.ids=[22],t.modules={399:t=>{
+t.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},517:t=>{
+t.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},3977:t=>{
+t.exports=require("node:fs/promises")},9411:t=>{
+t.exports=require("node:path")},7770:(t,e,a)=>{
+a.r(e),a.d(e,{
+originalPathname:()=>w,patchFetch:()=>g,requestAsyncStorage:()=>p,routeModule:()=>f,serverHooks:()=>y,staticGenerationAsyncStorage:()=>m});
+var r={};
+a.r(r),a.d(r,{
+GET:()=>d,POST:()=>h});
+var n=a(9303),i=a(8716),o=a(670),s=a(7070),l=a(263),c=a(281),u=a(644);
+async function d(){
+let t=await (0,l.A)();
+if(0===t.length){
+let{
+loadSettings:e}=await a.e(247).then(a.bind(a,3247)),r=await e(),n=Object.values(await (0,c.tx)()),i=n.filter(t=>t.success&&t.name&&t.folderPath).map(t=>({
+folderName:t.name,folderPath:t.folderPath,pathHash:t.key.includes("::")?t.key.split("::")[1]:"",fileCount:0,exeCandidates:[],rootPath:r.rootPath||void 0,savedAt:new Date().toISOString()}));
+if(i.length>0)t=i,await (0,l.o)(t);
+else{
+if(r.rootPath&&n.length>0)try{
+let{
+scanRoot:e}=await a.e(147).then(a.bind(a,2147)),n=(await e(r.rootPath,r.filterMode)).games.map(t=>({...t,rootPath:r.rootPath,savedAt:new Date().toISOString()}));
+n.length>0&&(t=n,await (0,l.o)(t))}
+catch{}0===t.length&&n.length>0&&(t=n.filter(t=>t.name&&t.folderPath).map(t=>({
+folderName:t.name,folderPath:t.folderPath??"",pathHash:t.key.includes("::")?t.key.split("::")[1]:"",fileCount:0,exeCandidates:[],savedAt:new Date().toISOString()}))).length>0&&await (0,l.o)(t)}}
+let e=[],v0=null;
+for(let a of t){
+let t=a.pathHash?await (0,c.EM)((0,u.kw)(a.folderName,a.pathHash)):null;
+if(!t&&a.pathHash&&a.folderName){
+v0=v0??Object.values(await (0,c.tx)());
+for(let n of v0){
+if(n&&n.data&&n.name===a.folderName&&2===n.schema&&(0,c.p7)(n)&&!n.key.startsWith("name::")){
+t=n.data;
+break}}}
+e.push({...a,metadata:t})}
+return s.NextResponse.json({
+ok:!0,games:e})}
+async function h(t){
+try{
+let e=await t.json().catch(()=>null),a=(Array.isArray(e?.games)?e.games:[]).map(t=>({
+folderName:"string"==typeof t.folderName?t.folderName:"",folderPath:"string"==typeof t.folderPath?t.folderPath:"",pathHash:"string"==typeof t.pathHash?t.pathHash:"",fileCount:"number"==typeof t.fileCount?t.fileCount:0,exeCandidates:Array.isArray(t.exeCandidates)?t.exeCandidates.filter(t=>t&&"string"==typeof t.path&&"string"==typeof t.name).slice(0,30):[],matchScore:"number"==typeof t.matchScore?t.matchScore:void 0,matchedTypes:Array.isArray(t.matchedTypes)?t.matchedTypes:void 0,rootPath:"string"==typeof t.rootPath?t.rootPath:void 0,savedAt:new Date().toISOString()}));
+return await (0,l.o)(a),s.NextResponse.json({
+ok:!0,count:a.length})}
+catch(t){
+return s.NextResponse.json({
+ok:!1,error:"保存失败："+(t instanceof Error?t.message:String(t))},{
+status:500})}}
+let f=new n.AppRouteRouteModule({
+definition:{
+kind:i.x.APP_ROUTE,page:"/api/library/route",pathname:"/api/library",filename:"route",bundlePath:"app/api/library/route"},resolvedPagePath:"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\chatbox-sandbox\\9f237e0b-ce8c-47e5-8a20-d38d704468b1\\galgame-library\\src\\app\\api\\library\\route.ts",nextConfigOutput:"standalone",userland:r}),{
+requestAsyncStorage:p,staticGenerationAsyncStorage:m,serverHooks:y}=f,w="/api/library/route";
+function g(){
+return(0,o.patchFetch)({
+serverHooks:y,staticGenerationAsyncStorage:m})}},281:(t,e,a)=>{
+a.d(e,{
+EM:()=>p,GR:()=>c,LK:()=>f,NO:()=>h,p7:()=>m,tx:()=>d});
+var r=a(3977),n=a.n(r),i=a(9411),o=a.n(i),s=a(8621);
+async function l(){
+return o().join(await (0,s.uQ)(),"cache.json")}
+let c=2,u=Promise.resolve();
+async function d(){
+let t=await l();
+try{
+let e=await n().readFile(t,"utf-8");
+return JSON.parse(e).games??{}}
+catch{
+return{}}}
+async function h(t){
+let e=u.then(async()=>{
+let e=await d();
+e[t.key]={...t,schema:c};
+let a=await l();
+await n().mkdir(o().dirname(a),{
+recursive:!0}),await n().writeFile(a,JSON.stringify({
+version:1,updatedAt:new Date().toISOString(),games:e},null,2))});
+u=e.catch(()=>{}),await e}
+async function f(){
+let t=u.then(async()=>{
+let t=await l();
+await n().mkdir(o().dirname(t),{
+recursive:!0}),await n().writeFile(t,JSON.stringify({
+version:1,updatedAt:new Date().toISOString(),games:{}},null,2))});
+u=t.catch(()=>{}),await t}
+async function p(t){
+let e=(await d())[t];
+return e&&e.schema===c&&m(e)?e.data:null}
+function m(t){
+let e=Date.now()-new Date(t.scrapedAt).getTime(),a=t.success?7776e6:2592e5;
+return e>=0&&e<a}},263:(t,e,a)=>{
+a.d(e,{
+A:()=>l,o:()=>u});
+var r=a(3977),n=a.n(r),i=a(9411),o=a.n(i),s=a(8621);
+async function l(){
+try{
+let t=o().join(await (0,s.uQ)(),"library.json"),e=await n().readFile(t,"utf-8"),a=JSON.parse(e);
+return Array.isArray(a.games)?a.games:[]}
+catch{
+return[]}}
+let c=Promise.resolve();
+async function u(t){
+let e=c.then(async()=>{
+let e=o().join(await (0,s.uQ)(),"library.json");
+await n().mkdir(o().dirname(e),{
+recursive:!0}),await n().writeFile(e,JSON.stringify({
+version:1,updatedAt:new Date().toISOString(),games:t},null,2))});
+c=e.catch(()=>{}),await e}},8621:(t,e,a)=>{
+a.d(e,{
+Sl:()=>d,ip:()=>s,uQ:()=>u});
+var r=a(3977),n=a.n(r),i=a(9411),o=a.n(i);
+let s=o().join(process.cwd(),"data"),l=o().join(s,"location.json"),c=null;
+async function u(){
+if(c)return c;
+try{
+let t=await n().readFile(l,"utf-8"),e=JSON.parse(t);
+if("string"==typeof e.dataPath&&e.dataPath.trim())return c=o().resolve(e.dataPath)}
+catch{}
+return c=s,s}
+async function d(t){
+let e=o().resolve(t);
+for(let t of(await n().mkdir(e,{
+recursive:!0}),["settings.json","cache.json","library.json","playtime.json"])){
+let a=o().join(s,t),r=o().join(e,t);
+await n().stat(a).catch(()=>null)&&await n().copyFile(a,r).catch(()=>{})}
+let a=o().join(s,"cache","images"),r=o().join(e,"cache","images");
+if(await n().stat(a).catch(()=>null))for(let t of(await n().mkdir(r,{
+recursive:!0}),await n().readdir(a).catch(()=>[])))await n().copyFile(o().join(a,t),o().join(r,t)).catch(()=>{});
+return await n().mkdir(s,{
+recursive:!0}),await n().writeFile(l,JSON.stringify({
+dataPath:e},null,2)),c=e,e}},644:(t,e,a)=>{
+function r(t){
+let e=5381;
+for(let a=0;
+a<t.length;
+a++)e=(e<<5)+e+t.charCodeAt(a)>>>0;
+return e.toString(16).padStart(8,"0")}
+function n(t,e){
+return`${
+t}::${
+e}
+`}
+function i(t){
+return new Promise(e=>setTimeout(e,t))}
+function o(t,e){
+return t&&e?(t=t.trim().toLowerCase())===(e=e.trim().toLowerCase())?1:t.includes(e)||e.includes(t)?.85:1-function(t,e){
+let a=t.length,r=e.length;
+if(!a)return r;
+if(!r)return a;
+let n=Array.from({
+length:r+1},(t,e)=>e);
+for(let i=1;
+i<=a;
+i++){
+let a=[i];
+for(let o=1;
+o<=r;
+o++)a[o]=Math.min(n[o]+1,a[o-1]+1,n[o-1]+(t[i-1]===e[o-1]?0:1));
+n=a}
+return n[r]}
+(t,e)/Math.max(t.length,e.length):0}
+function s(t,e,a,r=.4){
+let n=null,i=0;
+for(let r of e){
+let e=o(t,a(r));
+e>i&&(i=e,n=r)}
+return i>=r?n:null}
+a.d(e,{
+Li:()=>s,_v:()=>i,hY:()=>o,kw:()=>n,pb:()=>r})}};
+var e=require("../../../webpack-runtime.js");
+e.C(t);
+var a=t=>e(e.s=t),r=e.X(0,[948,972],()=>a(7770));
+module.exports=r})();

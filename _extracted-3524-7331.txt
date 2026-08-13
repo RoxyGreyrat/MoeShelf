@@ -1,0 +1,279 @@
+﻿===== module 3524 =====
+(e,t,a)=>{
+a.d(t,{
+ex:()=>c,kC:()=>s,searchBangumi:()=>l,sr:()=>u}
+);
+var n=a(8026),r=a(644);
+let i="https://api.bgm.tv",o={
+"User-Agent":n.yZ,Accept:"application/json"}
+;
+async function A(e,t,a){
+for(let r=0;
+r<3;
+r++){
+let s=await (0,n.kv)(e,t,a);
+if(s&&429===s.status){
+await new Promise(t=>setTimeout(t,2e3));
+continue}
+return s}
+return null}
+async function l(e){
+let t=[];
+try{
+let a=await (0,A)(`${
+i}
+/search/subject/${
+encodeURIComponent(e)}
+?type=4`,{
+headers:o}
+,12e3);
+if(!a.ok)return null;
+let r=await a.json().catch(()=>null);
+t=r?.list??[]}
+catch{
+return null}
+if(!t.length)return null;
+let a=function(e,t){
+let a=null,n=0;
+for(let i of t){
+let t=Math.max((0,r.hY)(e,i.name_cn||""),(0,r.hY)(e,i.name));
+t>n&&(n=t,a=i)}
+return n>=.4?a:null}
+(e,t);
+return a?await u(String(a.id))||{
+source:"bangumi",title:a.name_cn||a.name||e,cnTitle:a.name_cn||void 0,originalTitle:a.name_cn&&a.name!==a.name_cn?a.name:void 0,coverUrl:a.images?.large??a.images?.common,released:a.date??a.air_date,rating:"number"==typeof a.rating?.score?a.rating.score:void 0,votecount:"number"==typeof a.rating?.total?a.rating.total:void 0,description:a.summary,sourceUrl:`https://bgm.tv/subject/${
+a.id}
+`}
+:null}
+async function c(e){
+try{
+let t=await (0,A)(`${
+i}
+/search/subject/${
+encodeURIComponent(e)}
+?type=4`,{
+headers:o}
+,12e3);
+if(!t.ok)return[];
+let a=await t.json().catch(()=>null);
+return a?.list??[]}
+catch{
+return[]}
+}
+async function s(e){
+try{
+let t=await (0,A)(`${
+i}
+/v0/subjects/${
+e}
+/characters`,{
+headers:o}
+,1e4);
+if(!t.ok)return[];
+let a=await t.json().catch(()=>null);
+if(!Array.isArray(a)||!a.length)return[];
+return a.filter(e=>e.name).sort((e,t)=>(e.type??9)-(t.type??9)).slice(0,10).map(e=>({
+name:e.name,cv:e.actors?.[0]?.name||void 0,image:e.images?.grid??e.images?.large??e.images?.medium,role:e.relation||void 0}
+))}
+catch{
+return[]}
+}
+async function u(e){
+try{
+let t=await (0,A)(`${
+i}
+/v0/subjects/${
+e}
+`,{
+headers:o}
+,12e3);
+if(!t.ok)return null;
+let a=await t.json().catch(()=>null);
+if(!a?.name)return null;
+return function(e,t){
+let a=[];
+for(let t of e.infobox??[]){
+let e=(t.key??"").toLowerCase();
+if(/寮€鍙憒鍒朵綔|鍙戣|producer|developer/i.test(e)){
+let e=t.value;
+if("string"==typeof e)a.push(e);
+else if(Array.isArray(e)){
+for(let t of e)if("string"==typeof t)a.push(t);
+else if(t&&"object"==typeof t){
+let e=t.v??t.value;
+"string"==typeof e&&a.push(e)}
+}
+}
+}
+let n=e.name_cn||e.name;
+return{
+source:"bangumi",title:n||"",cnTitle:e.name_cn||void 0,originalTitle:e.name&&e.name!==n?e.name:void 0,coverUrl:e.images?.large??e.images?.common,description:e.summary,released:e.date,developers:a,rating:"number"==typeof e.rating?.score?10*e.rating.score:void 0,votecount:"number"==typeof e.rating?.total?e.rating.total:void 0,sourceUrl:`https://bgm.tv/subject/${
+e.id}
+`,bgmSubjectId:e.id}
+}
+(a,0)}
+catch{
+return null}
+}
+}
+
+
+===== module 7331 =====
+(e,t,a)=>{
+a.d(t,{
+CC:()=>u,JP:()=>m,cT:()=>s,qd:()=>d,wK:()=>p}
+);
+var n=a(8026),r=a(644);
+let i="https://www.ymgal.games",o=null;
+async function l(){
+if(o&&Date.now()<o.expiresAt)return o.token;
+try{
+let e=await (0,n.kv)(`${
+i}
+/oauth/token`,{
+method:"POST",headers:{
+"Content-Type":"application/x-www-form-urlencoded","User-Agent":n.yZ}
+,body:new URLSearchParams({
+grant_type:"client_credentials",client_id:"ymgal",client_secret:"luna0327",scope:"public"}
+).toString()}
+,12e3);
+if(!e.ok)return null;
+let t=await e.json().catch(()=>null);
+if(!t?.access_token)return null;
+return(o={
+token:t.access_token,expiresAt:Date.now()+(t.expires_in??2400)*1e3-6e4}
+).token}
+catch{
+return null}
+}
+async function c(e){
+let t=await l();
+if(!t)return[];
+try{
+let a=await (0,n.kv)(`${
+i}
+/open/archive/search-game?keyword=${
+encodeURIComponent(e)}
+&pageNum=1&pageSize=10&mode=list`,{
+headers:{
+Authorization:`Bearer ${
+t}
+`,version:"1","User-Agent":n.yZ,Accept:"application/json"}
+}
+,12e3);
+if(!a.ok)return[];
+let r=await a.json().catch(()=>null);
+return r?.data?.result??[]}
+catch{
+return[]}
+}
+async function s(e){
+let t=await c(e);
+if(!t.length)return null;
+let a=function(e,t){
+let a=null,n=0;
+for(let i of t){
+let t=Math.max((0,r.hY)(e,i.name),(0,r.hY)(e,i.chineseName??""));
+t>n&&(n=t,a=i)}
+return n>=.4?a:null}
+(e,t);
+return a?{
+source:"ymgal",title:a.chineseName||a.name||e,cnTitle:a.chineseName||void 0,originalTitle:a.chineseName?a.name:void 0,coverUrl:a.mainImg,released:a.releaseDate,developers:a.orgName?[a.orgName]:void 0,rating:a.score?10*parseFloat(a.score):void 0,sourceUrl:`${
+i}
+/archive/${
+a.id}
+`}
+:null}
+async function u(e){
+return c(e)}
+async function p(e){
+let t=await l();
+if(!t)return null;
+try{
+let a=await (0,n.kv)(`${
+i}
+/open/archive?gid=${
+e}
+`,{
+headers:{
+Authorization:`Bearer ${
+t}
+`,version:"1","User-Agent":n.yZ,Accept:"application/json"}
+}
+,12e3);
+if(!a.ok)return null;
+let r=await a.json().catch(()=>null),o=r?.data?.game;
+if(!o?.gid)return null;
+let l=o.chineseName||o.name||"";
+return{
+source:"ymgal",title:l||o.name||"",cnTitle:o.chineseName||void 0,originalTitle:o.name&&o.name!==l?o.name:void 0,coverUrl:o.mainImg,released:o.releaseDate,description:o.introduction,developers:o.releases?.find(e=>e.orgName)?.orgName?[o.releases.find(e=>e.orgName).orgName]:void 0,sourceUrl:`${
+i}
+/archive/${
+o.gid}
+`}
+}
+catch{
+return null}
+}
+async function m(e){
+if(!e)return null;
+try{
+let t=await u(e);
+if(!t.length)return null;
+let a=null,n=0;
+for(let i of t){
+let t=Math.max((0,r.hY)(e,i.chineseName||""),(0,r.hY)(e,i.name));
+t>n&&(n=t,a=i)}
+if(a&&n>=.3)return a.id??null;
+return null}
+catch{
+return null}
+}
+async function d(e){
+if(!e)return[];
+let t=await l();
+if(!t)return[];
+try{
+let a=await (0,n.kv)(`${
+i}
+/open/archive?gid=${
+e}
+`,{
+headers:{
+Authorization:`Bearer ${
+t}
+`,version:"1","User-Agent":n.yZ,Accept:"application/json"}
+}
+,12e3);
+if(!a.ok)return[];
+let r=await a.json().catch(()=>null),o=r?.data?.game?.characters??[],l=r?.data?.cidMapping??{
+}
+,c=o.map(e=>({
+name:l[String(e.cid)]?.name||"",role:1===e.characterPosition?"涓昏":"閰嶈"}
+)).filter(e=>e.name);
+if(!c.length)return[];
+let s=c.slice(0,4);
+return await Promise.all(s.map(async e=>{
+let a=o.find(t=>(l[String(t.cid)]?.name||"")===e.name)?.cid;
+if(a)try{
+let r=await (0,n.kv)(`${
+i}
+/open/archive?cid=${
+a}
+`,{
+headers:{
+Authorization:`Bearer ${
+t}
+`,version:"1","User-Agent":n.yZ,Accept:"application/json"}
+}
+,8e3),o=await r.json().catch(()=>null);
+o?.data?.character?.mainImg&&(e.image=o.data.character.mainImg)}
+catch{
+}
+}
+)),c}
+catch{
+return[]}
+}
+}
+

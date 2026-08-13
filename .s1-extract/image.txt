@@ -1,0 +1,202 @@
+"use strict";
+(()=>{
+var e={};
+e.id=649,e.ids=[649,247],e.modules={399:e=>{
+e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},517:e=>{
+e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},4026:e=>{
+e.exports=require("string_decoder")},8061:e=>{
+e.exports=require("node:assert")},2761:e=>{
+e.exports=require("node:async_hooks")},2254:e=>{
+e.exports=require("node:buffer")},2368:e=>{
+e.exports=require("node:console")},6005:e=>{
+e.exports=require("node:crypto")},5714:e=>{
+e.exports=require("node:diagnostics_channel")},604:e=>{
+e.exports=require("node:dns")},5673:e=>{
+e.exports=require("node:events")},3977:e=>{
+e.exports=require("node:fs/promises")},8849:e=>{
+e.exports=require("node:http")},2725:e=>{
+e.exports=require("node:http2")},7503:e=>{
+e.exports=require("node:net")},9411:e=>{
+e.exports=require("node:path")},8846:e=>{
+e.exports=require("node:perf_hooks")},5815:e=>{
+e.exports=require("node:querystring")},4492:e=>{
+e.exports=require("node:stream")},1764:e=>{
+e.exports=require("node:tls")},3020:e=>{
+e.exports=require("node:url")},7261:e=>{
+e.exports=require("node:util")},3746:e=>{
+e.exports=require("node:util/types")},4086:e=>{
+e.exports=require("node:worker_threads")},5628:e=>{
+e.exports=require("node:zlib")},1515:(e,t,r)=>{
+r.r(t),r.d(t,{
+originalPathname:()=>P,patchFetch:()=>k,requestAsyncStorage:()=>b,routeModule:()=>v,serverHooks:()=>q,staticGenerationAsyncStorage:()=>j});
+var a={};
+r.r(a),r.d(a,{
+GET:()=>M,dynamic:()=>h,runtime:()=>y});
+var o=r(9303),n=r(8716),i=r(670),s=r(3977),l=r.n(s),p=r(9411),c=r.n(p),u=r(7070),d=r(8026),f=r(644),g=r(8621);
+let h="force-dynamic",y="nodejs";
+async function m(){
+return c().join(await (0,g.uQ)(),"cache","images")}
+let w=new Map;
+async function x(e){
+var t;
+let r=(t=new URL(e).hostname).includes("ymgal")?"https://www.ymgal.games/":t.includes("cngal")||t.includes("tucang")?"https://www.cngal.org/":t.includes("bgm.tv")?"https://bgm.tv/":void 0,a={
+"User-Agent":d.yZ,Accept:"image/avif,image/webp,image/*,*/*;
+q=0.8"};
+r&&(a.Referer=r);
+for(let t=0;
+t<2;
+t++)try{
+let t=await (0,d.kv)(e,{
+headers:a},25e3);
+if(!t.ok)continue;
+let r=Buffer.from(await t.arrayBuffer());
+if(0===r.length||r.length>20971520)return null;
+let i=t.headers.get("content-type")??"";
+if(/^text\/html/i.test(i))return null;
+return{
+bytes:r,contentType:i||"image/jpeg"}}
+catch{}
+return null}
+async function M(e){
+let t=e.nextUrl.searchParams.get("url")??"";
+if(!/^https?:\/\//i.test(t))return new u.NextResponse("invalid url",{
+status:400});
+let r=(0,f.pb)(t),a=await m(),o=c().join(a,`${
+r}.bin`),n=c().join(a,`${
+r}.json`);
+try{
+let[e,t]=await Promise.all([l().readFile(o),l().readFile(n,"utf-8")]),r=JSON.parse(t);
+return new u.NextResponse(new Uint8Array(e),{
+headers:{
+"Content-Type":r.contentType??"image/jpeg","Cache-Control":"public, max-age=86400","X-Content-Type-Options":"nosniff","X-Image-Cache":"disk"}})}
+catch{}
+let i=w.get(r);
+i||(i=x(t).catch(()=>null).finally(()=>w.delete(r)),w.set(r,i));
+let s=await i;
+if(!s)return new u.NextResponse("proxy error",{
+status:502});
+try{
+await l().mkdir(a,{
+recursive:!0}),await Promise.all([l().writeFile(o,s.bytes),l().writeFile(n,JSON.stringify({
+contentType:s.contentType,savedAt:new Date().toISOString()}))])}
+catch(e){
+console.error("[image] 写缓存失败:",e instanceof Error?e.message:String(e))}
+return new u.NextResponse(new Uint8Array(s.bytes),{
+headers:{
+"Content-Type":s.contentType,"Cache-Control":"public, max-age=86400","X-Content-Type-Options":"nosniff","X-Image-Cache":"remote"}})}
+let v=new o.AppRouteRouteModule({
+definition:{
+kind:n.x.APP_ROUTE,page:"/api/image/route",pathname:"/api/image",filename:"route",bundlePath:"app/api/image/route"},resolvedPagePath:"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\chatbox-sandbox\\9f237e0b-ce8c-47e5-8a20-d38d704468b1\\galgame-library\\src\\app\\api\\image\\route.ts",nextConfigOutput:"standalone",userland:a}),{
+requestAsyncStorage:b,staticGenerationAsyncStorage:j,serverHooks:q}=v,P="/api/image/route";
+function k(){
+return(0,i.patchFetch)({
+serverHooks:q,staticGenerationAsyncStorage:j})}},8621:(e,t,r)=>{
+r.d(t,{
+Sl:()=>u,ip:()=>s,uQ:()=>c});
+var a=r(3977),o=r.n(a),n=r(9411),i=r.n(n);
+let s=i().join(process.cwd(),"data"),l=i().join(s,"location.json"),p=null;
+async function c(){
+if(p)return p;
+try{
+let e=await o().readFile(l,"utf-8"),t=JSON.parse(e);
+if("string"==typeof t.dataPath&&t.dataPath.trim())return p=i().resolve(t.dataPath)}
+catch{}
+return p=s,s}
+async function u(e){
+let t=i().resolve(e);
+for(let e of(await o().mkdir(t,{
+recursive:!0}),["settings.json","cache.json","library.json","playtime.json"])){
+let r=i().join(s,e),a=i().join(t,e);
+await o().stat(r).catch(()=>null)&&await o().copyFile(r,a).catch(()=>{})}
+let r=i().join(s,"cache","images"),a=i().join(t,"cache","images");
+if(await o().stat(r).catch(()=>null))for(let e of(await o().mkdir(a,{
+recursive:!0}),await o().readdir(r).catch(()=>[])))await o().copyFile(i().join(r,e),i().join(a,e)).catch(()=>{});
+return await o().mkdir(s,{
+recursive:!0}),await o().writeFile(l,JSON.stringify({
+dataPath:t},null,2)),p=t,t}},8026:(e,t,r)=>{
+r.d(t,{
+kv:()=>p,yZ:()=>n});
+var a=r(1085),o=r(3247);
+let n="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 GalgameLibrary/1.0.5",i=null,s="";
+async function l(){
+try{
+let e=((await (0,o.loadSettings)()).proxy??"").trim();
+e!==s&&(i=e&&/^https?:\/\//i.test(e)?new a.nE(e):null,s=e)}
+catch{
+i=null}
+return i}
+async function p(e,t={},r=12e3){
+let o=new AbortController,n=setTimeout(()=>o.abort(),r);
+try{
+let r=await l(),n={...t,signal:o.signal,cache:"no-store"};
+if(r)return await (0,a.he)(e,{...n,dispatcher:r});
+return await fetch(e,n)}
+finally{
+clearTimeout(n)}}},3247:(e,t,r)=>{
+r.d(t,{
+loadSettings:()=>d,z:()=>f});
+var a=r(3977),o=r.n(a),n=r(9411),i=r.n(n),s=r(8621);
+let l={
+rootPath:"",filterMode:"strict",exeMap:{},coverMap:{},titleMap:{},devMap:{},proxy:"",showBgmRating:!0},p=null,c="";
+async function u(){
+let e=await (0,s.uQ)();
+return e!==c&&(p=null),c=e,i().join(e,"settings.json")}
+async function d(){
+if(p)return p;
+let e=await u();
+try{
+let t=await o().readFile(e,"utf-8"),r=JSON.parse(t);
+p={
+rootPath:"string"==typeof r.rootPath?r.rootPath:"",filterMode:"loose"===r.filterMode?"loose":"strict",exeMap:r.exeMap&&"object"==typeof r.exeMap?r.exeMap:{},coverMap:r.coverMap&&"object"==typeof r.coverMap?r.coverMap:{},titleMap:r.titleMap&&"object"==typeof r.titleMap?r.titleMap:{},devMap:r.devMap&&"object"==typeof r.devMap?r.devMap:{},proxy:"string"==typeof r.proxy?r.proxy:"",showBgmRating:"boolean"!=typeof r.showBgmRating||r.showBgmRating}}
+catch{
+p={...l,exeMap:{},coverMap:{},titleMap:{},devMap:{}}}
+return p}
+async function f(e){
+let t=await d(),r={
+rootPath:"string"==typeof e.rootPath?e.rootPath:t.rootPath,filterMode:"loose"===e.filterMode?"loose":"strict"===e.filterMode?"strict":t.filterMode,exeMap:e.exeMap&&"object"==typeof e.exeMap?e.exeMap:t.exeMap,coverMap:e.coverMap&&"object"==typeof e.coverMap?e.coverMap:t.coverMap,titleMap:e.titleMap&&"object"==typeof e.titleMap?e.titleMap:t.titleMap,devMap:e.devMap&&"object"==typeof e.devMap?e.devMap:t.devMap,proxy:"string"==typeof e.proxy?e.proxy.trim():t.proxy,showBgmRating:"boolean"==typeof e.showBgmRating?e.showBgmRating:t.showBgmRating};
+p=r;
+let a=await u();
+return await o().mkdir(i().dirname(a),{
+recursive:!0}),await o().writeFile(a,JSON.stringify(r,null,2)),r}},644:(e,t,r)=>{
+function a(e){
+let t=5381;
+for(let r=0;
+r<e.length;
+r++)t=(t<<5)+t+e.charCodeAt(r)>>>0;
+return t.toString(16).padStart(8,"0")}
+function o(e,t){
+return`${
+e}::${
+t}
+`}
+function n(e){
+return new Promise(t=>setTimeout(t,e))}
+function i(e,t){
+return e&&t?(e=e.trim().toLowerCase())===(t=t.trim().toLowerCase())?1:e.includes(t)||t.includes(e)?.85:1-function(e,t){
+let r=e.length,a=t.length;
+if(!r)return a;
+if(!a)return r;
+let o=Array.from({
+length:a+1},(e,t)=>t);
+for(let n=1;
+n<=r;
+n++){
+let r=[n];
+for(let i=1;
+i<=a;
+i++)r[i]=Math.min(o[i]+1,r[i-1]+1,o[i-1]+(e[n-1]===t[i-1]?0:1));
+o=r}
+return o[a]}
+(e,t)/Math.max(e.length,t.length):0}
+function s(e,t,r,a=.4){
+let o=null,n=0;
+for(let a of t){
+let t=i(e,r(a));
+t>n&&(n=t,o=a)}
+return n>=a?o:null}
+r.d(t,{
+Li:()=>s,_v:()=>n,hY:()=>i,kw:()=>o,pb:()=>a})}};
+var t=require("../../../webpack-runtime.js");
+t.C(e);
+var r=e=>t(t.s=e),a=t.X(0,[948,972,85],()=>r(1515));
+module.exports=a})();

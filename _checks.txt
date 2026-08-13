@@ -1,0 +1,8 @@
+=== 1085 head ===
+1085:(A,e,t)=>{"use strict";t(4358);let r=t(7381),s=(t(2826),t(8730),t(4532),t(6783)),i=(t(7278),t(6155),t(6498)),n=t(3328),{InvalidArgumentError:o}=i,Q=t(9885),{getGlobalDispatcher:g,setGlobalDispatcher:B}=(t(7478),t(2591),t(9417),t(3212),t(9383),t(6684),t(7456));function E(A){return(e,t,r)=>{if("function"==typeof t&&(r=t,t=null),!e||"string"!=typeof e&&"object"!=typeof e&&!(e instanceof URL))throw new o("invalid url");if(null!=t&&"object"!=typeof t)throw new o("invalid opts");if(t&&null!=t.path){if("string"!=typeof t.path)throw new o("invalid opts.path");let A=t.path;t.path.startsWith("/")||
+
+=== ymgal qd region ===
+`${i}/open/archive?gid=${e}`,{headers:{Authorization:`Bearer ${t}`,version:"1","User-Agent":n.yZ,Accept:"application/json"}},12e3);if(!a.ok)return[];let r=await a.json().catch(()=>null),o=r?.data?.game?.characters??[],l=r?.data?.cidMapping??{},c=o.map(e=>({name:l[String(e.cid)]?.name||"",role:1===e.characterPosition?"主角":"配角"})).filter(e=>e.name);if(!c.length)return[];let s=c.slice(0,4);return await Promise.all(s.map(async e=>{let a=o.find(t=>(l[String(t.cid)]?.name||"")===e.name)?.cid;if(a)try{
+
+=== ymgal qd escaped ===
+`${i}/open/archive?gid=${e}`,{headers:{Authorization:`Bearer ${t}`,version:"1","User-Agent":n.yZ,Accept:"application/json"}},12e3);if(!a.ok)return[];let r=await a.json().catch(()=>null),o=r?.data?.game?.characters??[],l=r?.data?.cidMapping??{},c=o.map(e=>({name:l[String(e.cid)]?.name||"",role:1===e.characterPosition?"\u4e3b\u89d2":"\u914d\u89d2"})).filter(e=>e.name);if(!c.length)return[];let s=c.slice(0,4);return await Promise.all(s.map(async e=>{let a=o.find(t=>(l[String(t.cid)]?.name||"")===e.name)?.cid;if(a)try{

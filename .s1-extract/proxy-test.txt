@@ -1,0 +1,125 @@
+"use strict";
+(()=>{
+var e={};
+e.id=171,e.ids=[171,247],e.modules={399:e=>{
+e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},517:e=>{
+e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},4026:e=>{
+e.exports=require("string_decoder")},8061:e=>{
+e.exports=require("node:assert")},2761:e=>{
+e.exports=require("node:async_hooks")},2254:e=>{
+e.exports=require("node:buffer")},2368:e=>{
+e.exports=require("node:console")},6005:e=>{
+e.exports=require("node:crypto")},5714:e=>{
+e.exports=require("node:diagnostics_channel")},604:e=>{
+e.exports=require("node:dns")},5673:e=>{
+e.exports=require("node:events")},3977:e=>{
+e.exports=require("node:fs/promises")},8849:e=>{
+e.exports=require("node:http")},2725:e=>{
+e.exports=require("node:http2")},7503:e=>{
+e.exports=require("node:net")},9411:e=>{
+e.exports=require("node:path")},8846:e=>{
+e.exports=require("node:perf_hooks")},5815:e=>{
+e.exports=require("node:querystring")},4492:e=>{
+e.exports=require("node:stream")},1764:e=>{
+e.exports=require("node:tls")},3020:e=>{
+e.exports=require("node:url")},7261:e=>{
+e.exports=require("node:util")},3746:e=>{
+e.exports=require("node:util/types")},4086:e=>{
+e.exports=require("node:worker_threads")},5628:e=>{
+e.exports=require("node:zlib")},8264:(e,t,r)=>{
+r.r(t),r.d(t,{
+originalPathname:()=>g,patchFetch:()=>M,requestAsyncStorage:()=>f,routeModule:()=>x,serverHooks:()=>m,staticGenerationAsyncStorage:()=>y});
+var o={};
+r.r(o),r.d(o,{
+GET:()=>h,dynamic:()=>d,runtime:()=>c});
+var a=r(9303),i=r(8716),n=r(670),s=r(7070),p=r(3247),l=r(1085);
+let d="force-dynamic",c="nodejs",u=[{
+name:"VNDB",url:"https://api.vndb.org/kana/vn",method:"POST",body:JSON.stringify({
+filters:["id","=","v17"],fields:"title",results:1})},{
+name:"Bangumi",url:"https://api.bgm.tv/search/subject/ever17?type=4",method:"GET"}];
+async function h(){
+let e;
+let t=((await (0,p.loadSettings)()).proxy??"").trim();
+if(!t)return s.NextResponse.json({
+ok:!1,configured:!1,message:"未配置代理"});
+if(!/^https?:\/\//i.test(t))return s.NextResponse.json({
+ok:!1,configured:!0,message:"代理地址需以 http:// 或 https:// 开头"});
+try{
+e=new l.nE(t)}
+catch{
+return s.NextResponse.json({
+ok:!1,configured:!0,message:"代理地址格式无效"})}
+let r=[];
+for(let t of u){
+let o=Date.now();
+try{
+let a=new AbortController,i=setTimeout(()=>a.abort(),1e4),n=await (0,l.he)(t.url,{
+method:t.method,headers:{
+"Content-Type":"application/json",Accept:"application/json","User-Agent":"Mozilla/5.0 GalgameLibrary/1.0.5"},body:"POST"===t.method?t.body:void 0,dispatcher:e,signal:a.signal});
+clearTimeout(i),r.push({
+name:t.name,ok:n.ok||404===n.status,status:n.status,ms:Date.now()-o})}
+catch(e){
+r.push({
+name:t.name,ok:!1,ms:Date.now()-o,error:e instanceof Error?e.message:String(e)})}}
+let o=r.some(e=>e.ok);
+return s.NextResponse.json({
+ok:o,configured:!0,results:r})}
+let x=new a.AppRouteRouteModule({
+definition:{
+kind:i.x.APP_ROUTE,page:"/api/proxy-test/route",pathname:"/api/proxy-test",filename:"route",bundlePath:"app/api/proxy-test/route"},resolvedPagePath:"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\chatbox-sandbox\\9f237e0b-ce8c-47e5-8a20-d38d704468b1\\galgame-library\\src\\app\\api\\proxy-test\\route.ts",nextConfigOutput:"standalone",userland:o}),{
+requestAsyncStorage:f,staticGenerationAsyncStorage:y,serverHooks:m}=x,g="/api/proxy-test/route";
+function M(){
+return(0,n.patchFetch)({
+serverHooks:m,staticGenerationAsyncStorage:y})}},8621:(e,t,r)=>{
+r.d(t,{
+Sl:()=>c,ip:()=>s,uQ:()=>d});
+var o=r(3977),a=r.n(o),i=r(9411),n=r.n(i);
+let s=n().join(process.cwd(),"data"),p=n().join(s,"location.json"),l=null;
+async function d(){
+if(l)return l;
+try{
+let e=await a().readFile(p,"utf-8"),t=JSON.parse(e);
+if("string"==typeof t.dataPath&&t.dataPath.trim())return l=n().resolve(t.dataPath)}
+catch{}
+return l=s,s}
+async function c(e){
+let t=n().resolve(e);
+for(let e of(await a().mkdir(t,{
+recursive:!0}),["settings.json","cache.json","library.json","playtime.json"])){
+let r=n().join(s,e),o=n().join(t,e);
+await a().stat(r).catch(()=>null)&&await a().copyFile(r,o).catch(()=>{})}
+let r=n().join(s,"cache","images"),o=n().join(t,"cache","images");
+if(await a().stat(r).catch(()=>null))for(let e of(await a().mkdir(o,{
+recursive:!0}),await a().readdir(r).catch(()=>[])))await a().copyFile(n().join(r,e),n().join(o,e)).catch(()=>{});
+return await a().mkdir(s,{
+recursive:!0}),await a().writeFile(p,JSON.stringify({
+dataPath:t},null,2)),l=t,t}},3247:(e,t,r)=>{
+r.d(t,{
+loadSettings:()=>u,z:()=>h});
+var o=r(3977),a=r.n(o),i=r(9411),n=r.n(i),s=r(8621);
+let p={
+rootPath:"",filterMode:"strict",exeMap:{},coverMap:{},titleMap:{},devMap:{},proxy:"",showBgmRating:!0},l=null,d="";
+async function c(){
+let e=await (0,s.uQ)();
+return e!==d&&(l=null),d=e,n().join(e,"settings.json")}
+async function u(){
+if(l)return l;
+let e=await c();
+try{
+let t=await a().readFile(e,"utf-8"),r=JSON.parse(t);
+l={
+rootPath:"string"==typeof r.rootPath?r.rootPath:"",filterMode:"loose"===r.filterMode?"loose":"strict",exeMap:r.exeMap&&"object"==typeof r.exeMap?r.exeMap:{},coverMap:r.coverMap&&"object"==typeof r.coverMap?r.coverMap:{},titleMap:r.titleMap&&"object"==typeof r.titleMap?r.titleMap:{},devMap:r.devMap&&"object"==typeof r.devMap?r.devMap:{},proxy:"string"==typeof r.proxy?r.proxy:"",showBgmRating:"boolean"!=typeof r.showBgmRating||r.showBgmRating}}
+catch{
+l={...p,exeMap:{},coverMap:{},titleMap:{},devMap:{}}}
+return l}
+async function h(e){
+let t=await u(),r={
+rootPath:"string"==typeof e.rootPath?e.rootPath:t.rootPath,filterMode:"loose"===e.filterMode?"loose":"strict"===e.filterMode?"strict":t.filterMode,exeMap:e.exeMap&&"object"==typeof e.exeMap?e.exeMap:t.exeMap,coverMap:e.coverMap&&"object"==typeof e.coverMap?e.coverMap:t.coverMap,titleMap:e.titleMap&&"object"==typeof e.titleMap?e.titleMap:t.titleMap,devMap:e.devMap&&"object"==typeof e.devMap?e.devMap:t.devMap,proxy:"string"==typeof e.proxy?e.proxy.trim():t.proxy,showBgmRating:"boolean"==typeof e.showBgmRating?e.showBgmRating:t.showBgmRating};
+l=r;
+let o=await c();
+return await a().mkdir(n().dirname(o),{
+recursive:!0}),await a().writeFile(o,JSON.stringify(r,null,2)),r}}};
+var t=require("../../../webpack-runtime.js");
+t.C(e);
+var r=e=>t(t.s=e),o=t.X(0,[948,972,85],()=>r(8264));
+module.exports=o})();

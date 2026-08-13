@@ -1,0 +1,74 @@
+"use strict";
+(()=>{
+var e={};
+e.id=623,e.ids=[623],e.modules={399:e=>{
+e.exports=require("next/dist/compiled/next-server/app-page.runtime.prod.js")},517:e=>{
+e.exports=require("next/dist/compiled/next-server/app-route.runtime.prod.js")},3977:e=>{
+e.exports=require("node:fs/promises")},9411:e=>{
+e.exports=require("node:path")},9108:(e,t,a)=>{
+a.r(t),a.d(t,{
+originalPathname:()=>f,patchFetch:()=>w,requestAsyncStorage:()=>m,routeModule:()=>d,serverHooks:()=>h,staticGenerationAsyncStorage:()=>y});
+var i={};
+a.r(i),a.d(i,{
+GET:()=>p,dynamic:()=>c,runtime:()=>u});
+var r=a(9303),n=a(8716),s=a(670),o=a(7070),l=a(667);
+let c="force-dynamic",u="nodejs";
+async function p(){
+let e=await (0,l.D)();
+return o.NextResponse.json({
+ok:!0,games:e})}
+let d=new r.AppRouteRouteModule({
+definition:{
+kind:n.x.APP_ROUTE,page:"/api/playtime/route",pathname:"/api/playtime",filename:"route",bundlePath:"app/api/playtime/route"},resolvedPagePath:"C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\chatbox-sandbox\\9f237e0b-ce8c-47e5-8a20-d38d704468b1\\galgame-library\\src\\app\\api\\playtime\\route.ts",nextConfigOutput:"standalone",userland:i}),{
+requestAsyncStorage:m,staticGenerationAsyncStorage:y,serverHooks:h}=d,f="/api/playtime/route";
+function w(){
+return(0,s.patchFetch)({
+serverHooks:h,staticGenerationAsyncStorage:y})}},8621:(e,t,a)=>{
+a.d(t,{
+Sl:()=>p,ip:()=>o,uQ:()=>u});
+var i=a(3977),r=a.n(i),n=a(9411),s=a.n(n);
+let o=s().join(process.cwd(),"data"),l=s().join(o,"location.json"),c=null;
+async function u(){
+if(c)return c;
+try{
+let e=await r().readFile(l,"utf-8"),t=JSON.parse(e);
+if("string"==typeof t.dataPath&&t.dataPath.trim())return c=s().resolve(t.dataPath)}
+catch{}
+return c=o,o}
+async function p(e){
+let t=s().resolve(e);
+for(let e of(await r().mkdir(t,{
+recursive:!0}),["settings.json","cache.json","library.json","playtime.json"])){
+let a=s().join(o,e),i=s().join(t,e);
+await r().stat(a).catch(()=>null)&&await r().copyFile(a,i).catch(()=>{})}
+let a=s().join(o,"cache","images"),i=s().join(t,"cache","images");
+if(await r().stat(a).catch(()=>null))for(let e of(await r().mkdir(i,{
+recursive:!0}),await r().readdir(a).catch(()=>[])))await r().copyFile(s().join(a,e),s().join(i,e)).catch(()=>{});
+return await r().mkdir(o,{
+recursive:!0}),await r().writeFile(l,JSON.stringify({
+dataPath:t},null,2)),c=t,t}},667:(e,t,a)=>{
+a.d(t,{$:()=>u,D:()=>l});
+var i=a(3977),r=a.n(i),n=a(9411),s=a.n(n),o=a(8621);
+async function l(){
+try{
+let e=s().join(await (0,o.uQ)(),"playtime.json"),t=await r().readFile(e,"utf-8");
+return JSON.parse(t).games??{}}
+catch{
+return{}}}
+let c=Promise.resolve();
+async function u(e,t,a){
+if(!e||!(t>.15))return;
+let i=c.then(async()=>{
+let i=await l(),n=i[e]??{
+minutes:0,sessions:0,lastPlayed:""};
+i[e]={
+minutes:Math.round((n.minutes+t)*10)/10,sessions:n.sessions+1,lastPlayed:new Date(a).toISOString()};
+let c=s().join(await (0,o.uQ)(),"playtime.json");
+await r().mkdir(s().dirname(c),{
+recursive:!0}),await r().writeFile(c,JSON.stringify({
+version:1,updatedAt:new Date().toISOString(),games:i},null,2))});
+c=i.catch(()=>{}),await i}}};
+var t=require("../../../webpack-runtime.js");
+t.C(e);
+var a=e=>t(t.s=e),i=t.X(0,[948,972],()=>a(9108));
+module.exports=i})();
