@@ -120,6 +120,13 @@ export async function POST(req: NextRequest) {
           matchScore: typeof g.matchScore === 'number' ? g.matchScore : undefined,
           matchedTypes: Array.isArray(g.matchedTypes) ? g.matchedTypes : undefined,
           rootPath: typeof g.rootPath === 'string' ? g.rootPath : undefined,
+          tags: Array.isArray(g.tags)
+            ? (g.tags as unknown[])
+                .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+                .map((t) => t.trim())
+                .filter((t, i, arr) => arr.indexOf(t) === i)
+                .slice(0, 50)
+            : undefined,
           savedAt: new Date().toISOString(),
         }) as unknown as LibraryGame
     )

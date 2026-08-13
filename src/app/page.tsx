@@ -2921,12 +2921,12 @@ function useLibrary() {
           setFilterModeState(settingsJson.settings.filterMode)
         }
         if (libraryJson.ok && libraryJson.games && libraryJson.games.length > 0) {
-          const loaded = libraryJson.games.map((g: LibraryGame) => {
+          const loaded = (libraryJson.games as Game[]).map(g => {
             const pt = playtimeJson.games?.[g.pathHash]
             return {
               ...mergeGameSettings(g, maps.exeMap, maps.coverMap, maps.titleMap, maps.devMap),
               metadata: g.metadata,
-              status: g.metadata ? 'done' : 'pending',
+              status: (g.metadata ? 'done' : 'pending') as GameStatus,
               playtimeMinutes: pt?.minutes,
               lastPlayed: pt?.lastPlayed,
               playSessions: pt?.sessions,
