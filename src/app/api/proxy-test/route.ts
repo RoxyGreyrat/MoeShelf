@@ -50,18 +50,21 @@ export async function GET() {
     try {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 10000)
-      const res = await fetch(test.url, {
-        method: test.method,
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'User-Agent': 'Mozilla/5.0 GalgameLibrary/1.0.5',
-        },
-        body: test.method === 'POST' ? test.body : undefined,
-        // @ts-expect-error undici dispatcher 非标准 RequestInit 字段
-        dispatcher: agent,
-        signal: controller.signal,
-      })
+      const res = await fetch(
+        test.url,
+        {
+          method: test.method,
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'User-Agent': 'Mozilla/5.0 GalgameLibrary/1.0.5',
+          },
+          body: test.method === 'POST' ? test.body : undefined,
+          // undici 的 dispatcher 不是标准 RequestInit 字段，运行时由 undici fetch 消费
+          dispatcher: agent,
+          signal: controller.signal,
+        } as unknown as RequestInit
+      )
       clearTimeout(timer)
       results.push({
         name: test.name,
