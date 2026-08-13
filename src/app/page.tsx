@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 import QRCode from 'qrcode-generator'
 import { Icon, Spinner } from '@/components/icons'
 import { useToast } from '@/components/toast'
+import { buildCsv, downloadCsv } from '@/lib/csv'
 import type { LibraryGame, Settings } from '@/lib/types'
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,7 @@ interface Game extends LibraryGame {
   lastPlayed?: string
   playSessions?: number
   notDownloaded?: boolean
+  tags?: string[]
 }
 
 interface SearchCandidate {
@@ -841,6 +843,7 @@ function GameDetailModal({
   onCnDescription,
   onRelocate,
   onSetWebCustom,
+  onSetTags,
 }: {
   game: Game | null
   onClose: () => void
@@ -856,6 +859,7 @@ function GameDetailModal({
   onCnDescription?: (game: Game, description: string) => void
   onRelocate: (game: Game, path: string) => Promise<{ ok: boolean; title?: string; error?: string }>
   onSetWebCustom: (hash: string, patch: WebCustomPatch) => void
+  onSetTags?: (hash: string, tags: string[]) => void
 }) {
   const [rescrapeBusy, setRescrapeBusy] = useState(false)
   const [launchBusy, setLaunchBusy] = useState(false)
@@ -891,6 +895,7 @@ function GameDetailModal({
   const [charBusy, setCharBusy] = useState(false)
   const [charError, setCharError] = useState<string | null>(null)
   const [charMsg, setCharMsg] = useState<string | null>(null)
+  const [tagInput, setTagInput] = useState('')
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -925,6 +930,7 @@ function GameDetailModal({
   const title = displayTitle(v)
   const officialCnTitle = metadata?.officialCnTitle && metadata.officialCnTitle !== title ? metadata.officialCnTitle : null
   const coverUrl = v.customCover ?? metadata?.coverUrl ?? undefined
+  const tags = v.tags ?? []
   const dev = devName(v)
   const ratingDisplay = metadata?.rating != null && metadata.rating > 0 ? (metadata.rating / 10).toFixed(2) : null
   const bgmDisplay = metadata?.bgmRating && metadata.bgmRating > 0 ? (metadata.bgmRating / 10).toFixed(1) : null
@@ -1826,6 +1832,68 @@ function GameDetailModal({
               {!nd && (
                 <div>
                   <SectionRow
+                    active={section === 'tags'}
+                    icon="bookmark"
+                    label="标签"
+                    desc={tags.length > 0 ? tags.join('、') : '如「已通关」，工具栏可按标签筛选'}
+                    onClick={() => toggleSection('tags')}
+                  />
+                  {section === 'tags' && (
+                    <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {tags.map(tag => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-medium text-indigo-200"
+                            >
+                              {tag}
+                              <button
+                                onClick={() => onSetTags?.(v.pathHash, tags.filter(t => t !== tag))}
+                                className="text-indigo-200/70 transition hover:text-white"
+                                title={`移除标签 ${tag}`}
+                              >
+                                <Icon name="x" className="h-3 w-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-2 flex gap-1.5">
+                        <input
+                          value={tagInput}
+                          onChange={e => setTagInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter' && tagInput.trim()) {
+                              const t = tagInput.trim()
+                              if (!tags.includes(t)) onSetTags?.(v.pathHash, [...tags, t])
+                              setTagInput('')
+                            }
+                          }}
+                          placeholder="输入标签名，如：已通关"
+                          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-800 px-2.5 py-1.5 text-xs text-white placeholder:text-white/25 focus:border-indigo-400/50 focus:outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            const t = tagInput.trim()
+                            if (!t) return
+                            if (!tags.includes(t)) onSetTags?.(v.pathHash, [...tags, t])
+                            setTagInput('')
+                          }}
+                          disabled={!tagInput.trim()}
+                          className="shrink-0 rounded-lg bg-indigo-500/90 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-400 disabled:opacity-50"
+                        >
+                          添加
+                        </button>
+                      </div>
+                      <p className="mt-1.5 text-[10px] text-white/30">标签保存在资料库中，可在顶部工具栏按标签筛选游戏</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {!nd && (
+                <div>
+                  <SectionRow
                     active={section === 'path'}
                     icon="folder"
                     label="修改路径"
@@ -2113,6 +2181,8 @@ function SettingsModal({
   onSaveRootPath,
   showBgmRating,
   onToggleBgmRating,
+  games,
+  favHashes,
 }: {
   open: boolean
   onClose: () => void
@@ -2120,6 +2190,8 @@ function SettingsModal({
   onSaveRootPath: (path: string) => Promise<boolean>
   showBgmRating: boolean
   onToggleBgmRating: (v: boolean) => void
+  games: Game[]
+  favHashes: string[]
 }) {
   const { push } = useToast()
   const [cacheInfo, setCacheInfo] = useState<{ count: number } | null>(null)
@@ -2242,7 +2314,8 @@ function SettingsModal({
   useEffect(() => {
     if (open) {
       setCacheInfo(null)
-      setRootInput(settings?.rootPath ?? '')
+      // [任务四] 打开设置时不预填上次的扫描路径，输入框留空、placeholder 提示当前值
+      setRootInput('')
       setDataPathInput('')
       fetch('/api/cache')
         .then(r => r.json())
@@ -2271,7 +2344,8 @@ function SettingsModal({
   if (!open) return null
 
   const saveRoot = async (input: string) => {
-    const value = input.trim()
+    // [任务四] 输入留空时沿用当前已保存的根目录，不清空；两者都为空才报错
+    const value = input.trim() || settings?.rootPath?.trim()
     if (!value) {
       push('请输入根目录路径', 'error')
       return
@@ -2324,6 +2398,81 @@ function SettingsModal({
     }
   }
 
+  // ---- [1.5.0] 数据导出/导入 ----
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
+
+  const exportBackup = async () => {
+    setExporting(true)
+    try {
+      const resp = await fetch('/api/backup?action=export')
+      if (!resp.ok) {
+        const json = await resp.json().catch(() => null)
+        push(json?.error ?? '导出失败，请重试', 'error')
+        return
+      }
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const cd = resp.headers.get('content-disposition') ?? ''
+      const m = cd.match(/filename="?([^";]+)"?/)
+      a.href = url
+      a.download = m ? m[1] : `galgame-library-backup-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      push('资料库已导出', 'success')
+    } catch (e) {
+      push('导出失败：网络错误', 'error')
+    }
+    setExporting(false)
+  }
+
+  const importBackup = async (file: File) => {
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const resp = await fetch('/api/backup?action=import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: text,
+      })
+      const json = await resp.json()
+      if (json.ok) {
+        push(`导入成功：${json.games} 个游戏`, 'success')
+        setTimeout(() => window.location.reload(), 1200)
+      } else push(json.error ?? '导入失败，请检查文件格式', 'error')
+    } catch (e) {
+      push('导入失败：文件读取错误', 'error')
+    }
+    setImporting(false)
+  }
+
+  const exportCsv = () => {
+    try {
+      const rows = games.map(g => ({
+        title: displayTitle(g),
+        developer: devName(g) || '',
+        released: g.metadata?.released || '',
+        rating: g.metadata?.bgmRating
+          ? (g.metadata.bgmRating / 10).toFixed(1)
+          : g.metadata?.rating
+            ? (g.metadata.rating / 10).toFixed(1)
+            : '',
+        tags: g.tags ?? [],
+        favorite: favHashes.includes(g.pathHash),
+        downloaded: !g.notDownloaded,
+        path: g.folderPath || '',
+      }))
+      const csv = buildCsv(rows)
+      downloadCsv(`galgame-library-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+      push(`已导出 ${rows.length} 个游戏到 CSV`, 'success')
+    } catch (e) {
+      push('导出 CSV 失败', 'error')
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
@@ -2346,7 +2495,7 @@ function SettingsModal({
                 value={rootInput}
                 onChange={e => setRootInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !rootSaving && void saveRoot(rootInput)}
-                placeholder="例如：D:\Galgames"
+                placeholder={settings?.rootPath ? `当前：${settings.rootPath}（输入新路径或点浏览重新选择）` : '例如：D:\\Galgames'}
                 className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs text-white placeholder:text-white/25 focus:border-indigo-400/50 focus:outline-none"
               />
               <button
@@ -2554,6 +2703,45 @@ function SettingsModal({
             >
               {cacheClearing ? '正在清空…' : '清空全部刮削缓存'}
             </button>
+          </div>
+          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
+            <div className="mb-2 text-sm text-white/70">数据备份与导出</div>
+            <p className="mb-2 text-[11px] leading-relaxed text-white/35">
+              每次保存时自动备份到 <code className="rounded bg-black/40 px-1 py-0.5">data/backup</code>
+              （保留最近 5 份）；也可手动导出完整资料库或 CSV 列表。
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => void exportBackup()}
+                disabled={exporting}
+                className="shrink-0 rounded-lg bg-indigo-500/90 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-400 disabled:opacity-50"
+              >
+                {exporting ? '导出中…' : '导出资料'}
+              </button>
+              <label
+                className={`shrink-0 cursor-pointer rounded-lg bg-indigo-500/90 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-400 ${
+                  importing ? 'pointer-events-none opacity-50' : ''
+                }`}
+              >
+                {importing ? '导入中…' : '导入资料'}
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) void importBackup(f)
+                    e.target.value = ''
+                  }}
+                />
+              </label>
+              <button
+                onClick={exportCsv}
+                className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                导出 CSV
+              </button>
+            </div>
           </div>
           <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 text-xs leading-relaxed text-white/40">
             <p className="mb-1 font-medium text-white/60">说明</p>
@@ -2772,6 +2960,7 @@ function useLibrary() {
           matchScore: g.matchScore,
           matchedTypes: g.matchedTypes,
           rootPath: g.rootPath,
+          tags: g.tags,
         })),
       }),
     }).catch(() => {})
@@ -2786,6 +2975,13 @@ function useLibrary() {
       })
     },
     [saveLibrary],
+  )
+
+  const setGameTags = useCallback(
+    (hash: string, tags: string[]) => {
+      updateGames(prev => prev.map(g => (g.pathHash === hash ? { ...g, tags } : g)))
+    },
+    [updateGames],
   )
 
   const refreshPlaytime = useCallback(async () => {
@@ -3357,6 +3553,7 @@ function useLibrary() {
     setCnDescription,
     setCustomTitle,
     setCustomDeveloper,
+    setGameTags,
     setShowBgmRating,
     relocate,
   }
@@ -3376,6 +3573,7 @@ export default function Page() {
   const [companyBusy, setCompanyBusy] = useState<Record<string, boolean>>({})
   const [webSel, setWebSel] = useState<Game | null>(null)
   const [showFavOnly, setShowFavOnly] = useState(false)
+  const [tagFilter, setTagFilter] = useState('')
   const [favs, setFavs] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('gl-favs') || '[]') || []
@@ -3383,6 +3581,11 @@ export default function Page() {
       return []
     }
   })
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    for (const g of lib.games) for (const t of g.tags ?? []) if (t) set.add(t)
+    return [...set].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
+  }, [lib.games])
   const retriedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -3435,8 +3638,13 @@ export default function Page() {
 
   const visibleCount = useMemo(
     () =>
-      lib.games.filter(g => matchesFilter(g, query, filter) && (!showFavOnly || favs.includes(g.pathHash))).length,
-    [lib.games, query, filter, showFavOnly, favs],
+      lib.games.filter(
+        g =>
+          matchesFilter(g, query, filter) &&
+          (!showFavOnly || favs.includes(g.pathHash)) &&
+          (!tagFilter || (g.tags ?? []).includes(tagFilter)),
+      ).length,
+    [lib.games, query, filter, showFavOnly, favs, tagFilter],
   )
 
   const DevDot = ({ name }: { name: string }) => (
@@ -3658,7 +3866,9 @@ export default function Page() {
     filter.kind === 'dev' && companyData[filter.name!] && Array.isArray(companyData[filter.name!]!.games)
       ? (() => {
           const list = companyData[filter.name!]!
-            .games.filter(w => webSearchMatch(w, query) && (!showFavOnly || favs.includes(w.pathHash)))
+            .games.filter(
+              w => webSearchMatch(w, query) && (!showFavOnly || favs.includes(w.pathHash)) && !tagFilter,
+            )
             .sort((a, b) =>
               sortMode === 'release'
                 ? (b.metadata?.released || '0000').localeCompare(a.metadata?.released || '0000')
@@ -3843,6 +4053,21 @@ export default function Page() {
                 </span>
                 {lib.scraping && <span>· 获取信息中…</span>}
                 <span className="ml-auto flex flex-wrap items-center gap-1.5">
+                  {allTags.length > 0 && (
+                    <select
+                      value={tagFilter}
+                      onChange={e => setTagFilter(e.target.value)}
+                      title="按标签筛选"
+                      className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-1.5 py-1 text-[11px] text-white/70 focus:border-indigo-400/50 focus:outline-none"
+                    >
+                      <option value="">标签：全部</option>
+                      {allTags.map(t => (
+                        <option key={t} value={t} className="bg-ink-900">
+                          标签：{t}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <span className="flex items-center gap-0.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-0.5">
                     <button
                       title="游戏排序"
@@ -3908,7 +4133,11 @@ export default function Page() {
                     <div
                       key={g.pathHash}
                       className={
-                        matchesFilter(g, query, filter) && (!showFavOnly || favs.includes(g.pathHash)) ? '' : 'hidden'
+                        matchesFilter(g, query, filter) &&
+                        (!showFavOnly || favs.includes(g.pathHash)) &&
+                        (!tagFilter || (g.tags ?? []).includes(tagFilter))
+                          ? ''
+                          : 'hidden'
                       }
                     >
                       <GameCard
@@ -4024,6 +4253,7 @@ export default function Page() {
         onSetCover={lib.setGameCover}
         onSetTitle={lib.setCustomTitle}
         onSetDev={lib.setCustomDeveloper}
+        onSetTags={lib.setGameTags}
         onRelocate={lib.relocate}
         onSetWebCustom={setWebCustom}
         key={(lib.selectedGame || webSel)?.pathHash ?? 'none'}
@@ -4035,6 +4265,8 @@ export default function Page() {
         onSaveRootPath={lib.saveRootPath}
         showBgmRating={lib.settings?.showBgmRating !== false}
         onToggleBgmRating={lib.setShowBgmRating}
+        games={lib.games}
+        favHashes={favs}
       />
     </div>
   )
