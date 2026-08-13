@@ -6,7 +6,7 @@ export interface CsvGameRow {
   developer: string
   released: string
   rating: string
-  tags: string[]
+  completed: boolean
   favorite: boolean
   downloaded: boolean
   path: string
@@ -24,7 +24,7 @@ export function buildCsv(rows: CsvGameRow[]): string {
     '厂商',
     '发售日',
     '评分',
-    '标签',
+    '已通关',
     '收藏',
     '状态',
     '路径',
@@ -37,7 +37,7 @@ export function buildCsv(rows: CsvGameRow[]): string {
         esc(r.developer),
         esc(r.released),
         esc(r.rating),
-        esc(r.tags.join('、')),
+        r.completed ? '是' : '',
         r.favorite ? '是' : '',
         r.downloaded ? '已下载' : '未下载',
         esc(r.path),

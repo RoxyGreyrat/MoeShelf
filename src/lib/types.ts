@@ -28,8 +28,8 @@ export interface LibraryGame {
   matchedTypes: string[]
   rootPath: string
   savedAt: string
-  /** 1.5.0 新增：自定义标签（如「已通关」），旧数据无此字段 */
-  tags?: string[]
+  /** 1.5.0 新增：已通关标记，旧数据无此字段 */
+  completed?: boolean
   [key: string]: unknown
 }
 

@@ -63,7 +63,7 @@ interface Game extends LibraryGame {
   lastPlayed?: string
   playSessions?: number
   notDownloaded?: boolean
-  tags?: string[]
+  completed?: boolean
 }
 
 interface SearchCandidate {
@@ -843,7 +843,7 @@ function GameDetailModal({
   onCnDescription,
   onRelocate,
   onSetWebCustom,
-  onSetTags,
+  onSetCompleted,
 }: {
   game: Game | null
   onClose: () => void
@@ -859,7 +859,7 @@ function GameDetailModal({
   onCnDescription?: (game: Game, description: string) => void
   onRelocate: (game: Game, path: string) => Promise<{ ok: boolean; title?: string; error?: string }>
   onSetWebCustom: (hash: string, patch: WebCustomPatch) => void
-  onSetTags?: (hash: string, tags: string[]) => void
+  onSetCompleted?: (hash: string, completed: boolean) => void
 }) {
   const [rescrapeBusy, setRescrapeBusy] = useState(false)
   const [launchBusy, setLaunchBusy] = useState(false)
@@ -895,7 +895,6 @@ function GameDetailModal({
   const [charBusy, setCharBusy] = useState(false)
   const [charError, setCharError] = useState<string | null>(null)
   const [charMsg, setCharMsg] = useState<string | null>(null)
-  const [tagInput, setTagInput] = useState('')
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -930,7 +929,7 @@ function GameDetailModal({
   const title = displayTitle(v)
   const officialCnTitle = metadata?.officialCnTitle && metadata.officialCnTitle !== title ? metadata.officialCnTitle : null
   const coverUrl = v.customCover ?? metadata?.coverUrl ?? undefined
-  const tags = v.tags ?? []
+  const completed = v.completed === true
   const dev = devName(v)
   const ratingDisplay = metadata?.rating != null && metadata.rating > 0 ? (metadata.rating / 10).toFixed(2) : null
   const bgmDisplay = metadata?.bgmRating && metadata.bgmRating > 0 ? (metadata.bgmRating / 10).toFixed(1) : null
@@ -1311,6 +1310,20 @@ function GameDetailModal({
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-1.5">
                   <h2 className="text-base font-bold leading-snug text-white">{title}</h2>
+                  {!nd && (
+                    <button
+                      onClick={() => onSetCompleted?.(v.pathHash, !completed)}
+                      title={completed ? '标记为未通关' : '标记为已通关'}
+                      className={`mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition ${
+                        completed
+                          ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-300'
+                          : 'border-white/15 bg-white/[0.04] text-white/45 hover:bg-white/[0.08] hover:text-white/80'
+                      }`}
+                    >
+                      <Icon name="check" className="h-3 w-3" />
+                      已通关
+                    </button>
+                  )}
                   {metadata?.source && (
                     <span className="mt-0.5 shrink-0 rounded-full border border-indigo-400/30 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium text-indigo-300">
                       {SOURCE_LABELS[metadata.source]}
@@ -1333,6 +1346,20 @@ function GameDetailModal({
               <div className="hidden md:block">
                 <div className="flex items-start gap-2">
                   <h2 className="text-xl font-bold leading-snug text-white">{title}</h2>
+                  {!nd && (
+                    <button
+                      onClick={() => onSetCompleted?.(v.pathHash, !completed)}
+                      title={completed ? '标记为未通关' : '标记为已通关'}
+                      className={`mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition ${
+                        completed
+                          ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-300'
+                          : 'border-white/15 bg-white/[0.04] text-white/45 hover:bg-white/[0.08] hover:text-white/80'
+                      }`}
+                    >
+                      <Icon name="check" className="h-3 w-3" />
+                      已通关
+                    </button>
+                  )}
                   {metadata?.source && (
                     <span className="mt-0.5 shrink-0 rounded-full border border-indigo-400/30 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-medium text-indigo-300">
                       {SOURCE_LABELS[metadata.source]}
@@ -1832,68 +1859,6 @@ function GameDetailModal({
               {!nd && (
                 <div>
                   <SectionRow
-                    active={section === 'tags'}
-                    icon="bookmark"
-                    label="标签"
-                    desc={tags.length > 0 ? tags.join('、') : '如「已通关」，工具栏可按标签筛选'}
-                    onClick={() => toggleSection('tags')}
-                  />
-                  {section === 'tags' && (
-                    <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {tags.map(tag => (
-                            <span
-                              key={tag}
-                              className="inline-flex items-center gap-1 rounded-full bg-indigo-500/20 px-2.5 py-1 text-[11px] font-medium text-indigo-200"
-                            >
-                              {tag}
-                              <button
-                                onClick={() => onSetTags?.(v.pathHash, tags.filter(t => t !== tag))}
-                                className="text-indigo-200/70 transition hover:text-white"
-                                title={`移除标签 ${tag}`}
-                              >
-                                <Icon name="x" className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="mt-2 flex gap-1.5">
-                        <input
-                          value={tagInput}
-                          onChange={e => setTagInput(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && tagInput.trim()) {
-                              const t = tagInput.trim()
-                              if (!tags.includes(t)) onSetTags?.(v.pathHash, [...tags, t])
-                              setTagInput('')
-                            }
-                          }}
-                          placeholder="输入标签名，如：已通关"
-                          className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-800 px-2.5 py-1.5 text-xs text-white placeholder:text-white/25 focus:border-indigo-400/50 focus:outline-none"
-                        />
-                        <button
-                          onClick={() => {
-                            const t = tagInput.trim()
-                            if (!t) return
-                            if (!tags.includes(t)) onSetTags?.(v.pathHash, [...tags, t])
-                            setTagInput('')
-                          }}
-                          disabled={!tagInput.trim()}
-                          className="shrink-0 rounded-lg bg-indigo-500/90 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-400 disabled:opacity-50"
-                        >
-                          添加
-                        </button>
-                      </div>
-                      <p className="mt-1.5 text-[10px] text-white/30">标签保存在资料库中，可在顶部工具栏按标签筛选游戏</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              {!nd && (
-                <div>
-                  <SectionRow
                     active={section === 'path'}
                     icon="folder"
                     label="修改路径"
@@ -2196,6 +2161,8 @@ function SettingsModal({
   const { push } = useToast()
   const [cacheInfo, setCacheInfo] = useState<{ count: number } | null>(null)
   const [cacheClearing, setCacheClearing] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [rootInput, setRootInput] = useState('')
   const [rootSaving, setRootSaving] = useState(false)
   const [pickerTarget, setPickerTarget] = useState<string | null>(null)
@@ -2399,9 +2366,6 @@ function SettingsModal({
   }
 
   // ---- [1.5.0] 数据导出/导入 ----
-  const [exporting, setExporting] = useState(false)
-  const [importing, setImporting] = useState(false)
-
   const exportBackup = async () => {
     setExporting(true)
     try {
@@ -2460,7 +2424,7 @@ function SettingsModal({
           : g.metadata?.rating
             ? (g.metadata.rating / 10).toFixed(1)
             : '',
-        tags: g.tags ?? [],
+        completed: g.completed === true,
         favorite: favHashes.includes(g.pathHash),
         downloaded: !g.notDownloaded,
         path: g.folderPath || '',
@@ -2960,7 +2924,7 @@ function useLibrary() {
           matchScore: g.matchScore,
           matchedTypes: g.matchedTypes,
           rootPath: g.rootPath,
-          tags: g.tags,
+          completed: g.completed,
         })),
       }),
     }).catch(() => {})
@@ -2977,9 +2941,9 @@ function useLibrary() {
     [saveLibrary],
   )
 
-  const setGameTags = useCallback(
-    (hash: string, tags: string[]) => {
-      updateGames(prev => prev.map(g => (g.pathHash === hash ? { ...g, tags } : g)))
+  const setGameCompleted = useCallback(
+    (hash: string, completed: boolean) => {
+      updateGames(prev => prev.map(g => (g.pathHash === hash ? { ...g, completed } : g)))
     },
     [updateGames],
   )
@@ -3553,7 +3517,7 @@ function useLibrary() {
     setCnDescription,
     setCustomTitle,
     setCustomDeveloper,
-    setGameTags,
+    setGameCompleted,
     setShowBgmRating,
     relocate,
   }
@@ -3573,7 +3537,6 @@ export default function Page() {
   const [companyBusy, setCompanyBusy] = useState<Record<string, boolean>>({})
   const [webSel, setWebSel] = useState<Game | null>(null)
   const [showFavOnly, setShowFavOnly] = useState(false)
-  const [tagFilter, setTagFilter] = useState('')
   const [favs, setFavs] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('gl-favs') || '[]') || []
@@ -3581,11 +3544,6 @@ export default function Page() {
       return []
     }
   })
-  const allTags = useMemo(() => {
-    const set = new Set<string>()
-    for (const g of lib.games) for (const t of g.tags ?? []) if (t) set.add(t)
-    return [...set].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))
-  }, [lib.games])
   const retriedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -3639,12 +3597,9 @@ export default function Page() {
   const visibleCount = useMemo(
     () =>
       lib.games.filter(
-        g =>
-          matchesFilter(g, query, filter) &&
-          (!showFavOnly || favs.includes(g.pathHash)) &&
-          (!tagFilter || (g.tags ?? []).includes(tagFilter)),
+        g => matchesFilter(g, query, filter) && (!showFavOnly || favs.includes(g.pathHash)),
       ).length,
-    [lib.games, query, filter, showFavOnly, favs, tagFilter],
+    [lib.games, query, filter, showFavOnly, favs],
   )
 
   const DevDot = ({ name }: { name: string }) => (
@@ -3866,9 +3821,7 @@ export default function Page() {
     filter.kind === 'dev' && companyData[filter.name!] && Array.isArray(companyData[filter.name!]!.games)
       ? (() => {
           const list = companyData[filter.name!]!
-            .games.filter(
-              w => webSearchMatch(w, query) && (!showFavOnly || favs.includes(w.pathHash)) && !tagFilter,
-            )
+            .games.filter(w => webSearchMatch(w, query) && (!showFavOnly || favs.includes(w.pathHash)))
             .sort((a, b) =>
               sortMode === 'release'
                 ? (b.metadata?.released || '0000').localeCompare(a.metadata?.released || '0000')
@@ -4053,21 +4006,6 @@ export default function Page() {
                 </span>
                 {lib.scraping && <span>· 获取信息中…</span>}
                 <span className="ml-auto flex flex-wrap items-center gap-1.5">
-                  {allTags.length > 0 && (
-                    <select
-                      value={tagFilter}
-                      onChange={e => setTagFilter(e.target.value)}
-                      title="按标签筛选"
-                      className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-1.5 py-1 text-[11px] text-white/70 focus:border-indigo-400/50 focus:outline-none"
-                    >
-                      <option value="">标签：全部</option>
-                      {allTags.map(t => (
-                        <option key={t} value={t} className="bg-ink-900">
-                          标签：{t}
-                        </option>
-                      ))}
-                    </select>
-                  )}
                   <span className="flex items-center gap-0.5 rounded-lg border border-white/[0.06] bg-white/[0.02] p-0.5">
                     <button
                       title="游戏排序"
@@ -4134,8 +4072,7 @@ export default function Page() {
                       key={g.pathHash}
                       className={
                         matchesFilter(g, query, filter) &&
-                        (!showFavOnly || favs.includes(g.pathHash)) &&
-                        (!tagFilter || (g.tags ?? []).includes(tagFilter))
+                        (!showFavOnly || favs.includes(g.pathHash))
                           ? ''
                           : 'hidden'
                       }
@@ -4253,7 +4190,7 @@ export default function Page() {
         onSetCover={lib.setGameCover}
         onSetTitle={lib.setCustomTitle}
         onSetDev={lib.setCustomDeveloper}
-        onSetTags={lib.setGameTags}
+        onSetCompleted={lib.setGameCompleted}
         onRelocate={lib.relocate}
         onSetWebCustom={setWebCustom}
         key={(lib.selectedGame || webSel)?.pathHash ?? 'none'}
