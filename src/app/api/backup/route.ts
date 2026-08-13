@@ -10,7 +10,7 @@ import {
   savePlaytime,
   updateSettings,
 } from '@/lib/core'
-import type { LibraryFile, PlaytimeFile, Settings } from '@/lib/types'
+import type { LibraryFile, LibraryGame, PlaytimeFile, Settings } from '@/lib/types'
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -76,27 +76,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: '导入数据缺少有效的 playtime.games 对象' }, { status: 400 })
     }
     // 与现有数据格式兼容：写回前用与编译产物相同的字段映射做归一化
-    const games = library.games.map((g) => ({
-      folderName: typeof g.folderName === 'string' ? g.folderName : '',
-      folderPath: typeof g.folderPath === 'string' ? g.folderPath : '',
-      pathHash: typeof g.pathHash === 'string' ? g.pathHash : '',
-      fileCount: typeof g.fileCount === 'number' ? g.fileCount : 0,
-      exeCandidates: Array.isArray(g.exeCandidates)
-        ? g.exeCandidates
-            .filter(
-              (e) =>
-                e &&
-                typeof (e as { path?: unknown }).path === 'string' &&
-                typeof (e as { name?: unknown }).name === 'string'
-            )
-            .slice(0, 30)
-        : [],
-      matchScore: typeof g.matchScore === 'number' ? g.matchScore : undefined,
-      matchedTypes: Array.isArray(g.matchedTypes) ? g.matchedTypes : undefined,
-      rootPath: typeof g.rootPath === 'string' ? g.rootPath : undefined,
-      savedAt:
-        typeof g.savedAt === 'string' ? g.savedAt : new Date().toISOString(),
-    }))
+    const games = library.games.map(
+      (g) =>
+        ({
+          folderName: typeof g.folderName === 'string' ? g.folderName : '',
+          folderPath: typeof g.folderPath === 'string' ? g.folderPath : '',
+          pathHash: typeof g.pathHash === 'string' ? g.pathHash : '',
+          fileCount: typeof g.fileCount === 'number' ? g.fileCount : 0,
+          exeCandidates: Array.isArray(g.exeCandidates)
+            ? g.exeCandidates
+                .filter(
+                  (e) =>
+                    e &&
+                    typeof (e as { path?: unknown }).path === 'string' &&
+                    typeof (e as { name?: unknown }).name === 'string'
+                )
+                .slice(0, 30)
+            : [],
+          matchScore: typeof g.matchScore === 'number' ? g.matchScore : undefined,
+          matchedTypes: Array.isArray(g.matchedTypes) ? g.matchedTypes : undefined,
+          rootPath: typeof g.rootPath === 'string' ? g.rootPath : undefined,
+          savedAt: typeof g.savedAt === 'string' ? g.savedAt : new Date().toISOString(),
+        }) as unknown as LibraryGame
+    )
     await saveLibrary(games)
     await updateSettings(settings)
     await savePlaytime({ version: 1, updatedAt: new Date().toISOString(), games: playtime.games })

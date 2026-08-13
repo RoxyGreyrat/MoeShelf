@@ -30,7 +30,7 @@ export async function GET() {
         savedAt: new Date().toISOString(),
       }))
     if (rebuilt.length > 0) {
-      games = rebuilt
+      games = rebuilt as unknown as LibraryGame[]
       await saveLibrary(games)
     } else {
       // n 复用：先为缓存条目，扫描成功后被替换为扫描结果
@@ -65,7 +65,7 @@ export async function GET() {
             fileCount: 0,
             exeCandidates: [],
             savedAt: new Date().toISOString(),
-          }))
+          })) as unknown as LibraryGame[]
         if (games.length > 0) await saveLibrary(games)
       }
     }
@@ -101,26 +101,27 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null)
-    const games: LibraryGame[] = (Array.isArray(body?.games) ? body.games : []).map(
-      (g: Record<string, unknown>) => ({
-        folderName: typeof g.folderName === 'string' ? g.folderName : '',
-        folderPath: typeof g.folderPath === 'string' ? g.folderPath : '',
-        pathHash: typeof g.pathHash === 'string' ? g.pathHash : '',
-        fileCount: typeof g.fileCount === 'number' ? g.fileCount : 0,
-        exeCandidates: Array.isArray(g.exeCandidates)
-          ? g.exeCandidates
-              .filter(
-                (e: unknown) =>
-                  e && typeof (e as { path?: unknown }).path === 'string' &&
-                  typeof (e as { name?: unknown }).name === 'string'
-              )
-              .slice(0, 30)
-          : [],
-        matchScore: typeof g.matchScore === 'number' ? g.matchScore : undefined,
-        matchedTypes: Array.isArray(g.matchedTypes) ? g.matchedTypes : undefined,
-        rootPath: typeof g.rootPath === 'string' ? g.rootPath : undefined,
-        savedAt: new Date().toISOString(),
-      })
+    const games = (Array.isArray(body?.games) ? body.games : []).map(
+      (g: Record<string, unknown>) =>
+        ({
+          folderName: typeof g.folderName === 'string' ? g.folderName : '',
+          folderPath: typeof g.folderPath === 'string' ? g.folderPath : '',
+          pathHash: typeof g.pathHash === 'string' ? g.pathHash : '',
+          fileCount: typeof g.fileCount === 'number' ? g.fileCount : 0,
+          exeCandidates: Array.isArray(g.exeCandidates)
+            ? g.exeCandidates
+                .filter(
+                  (e: unknown) =>
+                    e && typeof (e as { path?: unknown }).path === 'string' &&
+                    typeof (e as { name?: unknown }).name === 'string'
+                )
+                .slice(0, 30)
+            : [],
+          matchScore: typeof g.matchScore === 'number' ? g.matchScore : undefined,
+          matchedTypes: Array.isArray(g.matchedTypes) ? g.matchedTypes : undefined,
+          rootPath: typeof g.rootPath === 'string' ? g.rootPath : undefined,
+          savedAt: new Date().toISOString(),
+        }) as unknown as LibraryGame
     )
     await saveLibrary(games)
     return NextResponse.json({ ok: true, count: games.length })
