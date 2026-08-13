@@ -8,7 +8,7 @@ import type { CharacterEntry, GameData } from './source-types'
 
 const YMGAL_BASE = 'https://www.ymgal.games'
 
-interface YmgalSearchItem {
+export interface YmgalSearchItem {
   id: number
   name: string
   chineseName?: string

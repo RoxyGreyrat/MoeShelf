@@ -8,6 +8,7 @@ import fs from 'fs/promises'
 import type {
   CacheEntry,
   CacheFile,
+  LibraryFile,
   LibraryGame,
   PlaytimeFile,
   PlaytimeGame,

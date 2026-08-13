@@ -5,6 +5,7 @@
 // 任务二图标修复点以「[FIX]」注释标出。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import QRCode from 'qrcode-generator'
 import { Icon, Spinner } from '@/components/icons'
 import { useToast } from '@/components/toast'
@@ -44,6 +45,7 @@ interface GameMetadata {
   bgmSubjectId?: string
   sexual?: number
   scrapedAt?: string
+  coverUrl?: string
   characters?: CharacterEntry[]
   [key: string]: unknown
 }
@@ -452,10 +454,6 @@ function CoverImage({ url, alt, className = '' }: { url: string; alt?: string; c
       )}
     </div>
   )
-}
-
-function SpinnerBlock({ className }: { className: string }) {
-  return <Spinner className={className} />
 }
 
 // ---------------------------------------------------------------------------
@@ -1030,9 +1028,9 @@ function GameDetailModal({
   const toggleSection = (key: string) => {
     setSection(section === key ? null : key)
     if (key === 'title') setTitleInput(displayTitle(v))
-    if (key !== 'fix' || fixQuery.trim() || setFixQuery(v.folderName));
+    if (key === 'fix' && !fixQuery.trim()) setFixQuery(v.folderName)
     if (key === 'dev') setDevInput(devName(v) ?? '')
-    if (key !== 'char' || charQuery.trim() || setCharQuery(v.folderName));
+    if (key === 'char' && !charQuery.trim()) setCharQuery(v.folderName)
   }
 
   const runFixSearch = async (query: string) => {
@@ -1089,7 +1087,7 @@ function GameDetailModal({
     setCoverLoading(false)
   }
 
-  const pickCover = async (url: string) => {
+  const pickCover = async (url: string | null) => {
     await handleSetCover(v, url)
     setSection(null)
   }
@@ -1614,7 +1612,7 @@ function GameDetailModal({
                       </button>
                       {v.customCover && (
                         <button
-                          onClick={() => void pickCover(null as unknown as string)}
+                          onClick={() => void pickCover(null)}
                           className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-white/50 transition hover:text-white"
                         >
                           恢复默认
@@ -2123,7 +2121,7 @@ function SettingsModal({
   showBgmRating: boolean
   onToggleBgmRating: (v: boolean) => void
 }) {
-  const push = useToast()
+  const { push } = useToast()
   const [cacheInfo, setCacheInfo] = useState<{ count: number } | null>(null)
   const [cacheClearing, setCacheClearing] = useState(false)
   const [rootInput, setRootInput] = useState('')
@@ -2637,7 +2635,7 @@ function ProgressToast({ done, total }: { done: number; total: number }) {
   )
 }
 
-function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       onClick={onClick}
@@ -2675,7 +2673,7 @@ function mergeGameSettings(
 }
 
 function useLibrary() {
-  const push = useToast()
+  const { push } = useToast()
   const [games, setGames] = useState<Game[]>([])
   const [settings, setSettings] = useState<AppSettings>(null)
   const [filterMode, setFilterModeState] = useState('strict')
@@ -3270,7 +3268,7 @@ function useLibrary() {
         const next = prev.filter(g => g.pathHash !== hash)
         const removed = prev.find(g => g.pathHash === hash)
         if (removed && removed.folderPath) {
-          let ignore = ignorePathsRef.current ?? (settings && (settings.ignorePaths as string[])) || []
+          let ignore = ignorePathsRef.current ?? ((settings && (settings.ignorePaths as string[])) || [])
           ignore = ignore.filter(p => p !== removed.folderPath)
           ignore.push(removed.folderPath)
           ignorePathsRef.current = ignore
@@ -3470,7 +3468,7 @@ export default function Page() {
     </button>
   )
 
-  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  const SectionLabel = ({ children }: { children: ReactNode }) => (
     <p className="px-2.5 pb-1 pt-1.5 text-[10px] font-medium uppercase tracking-wider text-white/25">{children}</p>
   )
 
@@ -3559,6 +3557,7 @@ export default function Page() {
           matchScore: 0,
           matchedTypes: ['web'],
           rootPath: '',
+          savedAt: new Date().toISOString(),
           notDownloaded: true,
           status: 'done' as GameStatus,
           metadata: {
