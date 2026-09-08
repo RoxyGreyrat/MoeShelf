@@ -1,7 +1,7 @@
 [![Made with DeepSeek V4 Flash](https://img.shields.io/badge/Made%20with-DeepSeek%20V4%20Flash-536DFE?style=flat-square\&logo=deepseek\&logoColor=white)](https://deepseek.com)
 
 <p align="center">
-  <img src="docs/assets/logo.png" width="180" alt="MoeShelf">
+  <img src="docs/assets/icon.png" width="180" alt="MoeShelf">
 </p>
 
 <h1 align="center">MoeShelf</h1>
