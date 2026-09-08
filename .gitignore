@@ -8,3 +8,7 @@ data
 
 # 编译产物
 MoeShelf.exe
+
+# 个人一键脚本（仅本地使用，不入库）
+sync-to-github.bat
+release-to-github.bat
