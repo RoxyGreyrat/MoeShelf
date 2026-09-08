@@ -490,14 +490,21 @@ function Header({
   scraping: boolean
   rootName?: string | null
 }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    typeof document !== 'undefined' &&
-    document.documentElement.getAttribute('data-theme') === 'light'
-      ? 'light'
-      : 'dark'
-  )
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  // 挂载后与 document 实际主题同步（首帧由 layout 内联脚本写入，避免与本地状态脱节导致“第一次切换无效”）
+  useEffect(() => {
+    const sync = () => {
+      const cur = document.documentElement.getAttribute('data-theme')
+      if (cur === 'light' || cur === 'dark') setTheme(cur)
+    }
+    sync()
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
+  }, [])
   const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light'
+    // 以当前实际 DOM 属性为准切换（多次点击始终交替，不会“卡住”）
+    const next =
+      document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
     setTheme(next)
     document.documentElement.setAttribute('data-theme', next)
     try {
@@ -562,6 +569,28 @@ function Header({
         </div>
       </div>
     </header>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// 时钟图标（游玩时长用，比文本符号更清晰）
+// ---------------------------------------------------------------------------
+
+function ClockIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.2 2" />
+    </svg>
   )
 }
 
@@ -758,9 +787,20 @@ function GameCard({
           {dev ? ` · ${dev}` : ''}
         </p>
         <p className="truncate text-[11px] text-white/25" title={game.folderPath}>
-          {nd
-            ? `未下载 · VNDB #${metadata?.vndbId || ''}`
-            : [`${duration ? `⏱ ${duration} · ` : ''}`, game.folderName]}
+          {nd ? (
+            `未下载 · VNDB #${metadata?.vndbId || ''}`
+          ) : (
+            <span className="inline-flex min-w-0 items-center gap-1">
+              {duration ? (
+                <span className="inline-flex shrink-0 items-center gap-1 align-middle text-white/40">
+                  <ClockIcon className="h-3 w-3 shrink-0" />
+                  {duration}
+                </span>
+              ) : null}
+              {duration ? <span className="shrink-0 text-white/20">·</span> : null}
+              <span className="truncate">{game.folderName}</span>
+            </span>
+          )}
         </p>
       </div>
       <div className="flex items-center gap-1.5 border-t border-white/[0.06] px-3 py-2">
@@ -1274,9 +1314,10 @@ function GameDetailModal({
         </span>
       )}
       {duration && (
-        <span className="rounded-lg bg-emerald-500/10 px-2 py-1 text-emerald-300">
-          ⏱ {duration}
-          {v.playSessions ? ` · ${v.playSessions}次` : ''}
+        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-1 text-emerald-300">
+          <ClockIcon className="h-3.5 w-3.5 shrink-0" />
+          <span>{duration}</span>
+          {v.playSessions ? <span> · {v.playSessions}次</span> : null}
         </span>
       )}
     </>

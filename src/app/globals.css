@@ -2,45 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== 主题 ===== */
-/* 暗色（默认）：不应用滤镜 */
+/* ===== 主题（暗色为默认；亮色为直接覆盖，不对图片/封面做任何滤镜处理） ===== */
 :root {
   --gl-bg: #0a0b10;
-  --theme-filter: none;
   color-scheme: dark;
 }
 html[data-theme='light'] {
-  --gl-bg: #f4f5f9;
-  /* V1 亮色：整体反色 + 色相回正（保留对比度与可读性），图片单独二次反色还原 */
-  --theme-filter: invert(1) hue-rotate(180deg);
+  --gl-bg: #eef0f5;
   color-scheme: light;
 }
 body {
   background-color: var(--gl-bg);
 }
-/* 亮色下把位图（封面/截图等）再反一次，恢复原图颜色 */
-html[data-theme='light'] #moeshelf-root img {
-  filter: invert(1) hue-rotate(180deg);
-  -webkit-filter: invert(1) hue-rotate(180deg);
+html[data-theme='light'] body {
+  color: #232833;
 }
-html[data-theme='light'] #moeshelf-root img.grayscale {
-  filter: invert(1) hue-rotate(180deg) grayscale(100%);
-  -webkit-filter: invert(1) hue-rotate(180deg) grayscale(100%);
+
+/* 亮色：表面（ink 系列，含 /alpha 变体一并转浅） */
+html[data-theme='light'] [class*='bg-ink-950'] {
+  background-color: #f2f4f8;
 }
-html[data-theme='light'] #moeshelf-root img.r18-blur {
-  filter: invert(1) hue-rotate(180deg) blur(10px);
-  -webkit-filter: invert(1) hue-rotate(180deg) blur(10px);
+html[data-theme='light'] [class*='bg-ink-900'] {
+  background-color: #e9ecf3;
 }
-html[data-theme='light'] #moeshelf-root img.grayscale.r18-blur {
-  filter: invert(1) hue-rotate(180deg) grayscale(100%) blur(10px);
-  -webkit-filter: invert(1) hue-rotate(180deg) grayscale(100%) blur(10px);
+html[data-theme='light'] [class*='bg-ink-800'] {
+  background-color: #dfe3ec;
 }
+/* 亮色：半透明白色叠加 → 半透明深灰（卡片/输入框层次感） */
+html[data-theme='light'] [class*='bg-white/'] {
+  background-color: rgba(18, 24, 36, 0.05);
+}
+html[data-theme='light'] [class*='border-white/'] {
+  border-color: rgba(15, 21, 33, 0.14);
+}
+
+/* 亮色文字：白色系按透明度映射为柔和的深灰（非纯黑） */
+html[data-theme='light'] [class*='text-white'] {
+  color: #232833;
+}
+html[data-theme='light'] [class*='text-white/90'],
+html[data-theme='light'] [class*='text-white/85'],
+html[data-theme='light'] [class*='text-white/80'] {
+  color: #262c3a;
+}
+html[data-theme='light'] [class*='text-white/70'],
+html[data-theme='light'] [class*='text-white/60'] {
+  color: #3b4353;
+}
+html[data-theme='light'] [class*='text-white/50'],
+html[data-theme='light'] [class*='text-white/45'],
+html[data-theme='light'] [class*='text-white/40'] {
+  color: #4d5566;
+}
+html[data-theme='light'] [class*='text-white/35'],
+html[data-theme='light'] [class*='text-white/30'],
+html[data-theme='light'] [class*='text-white/25'] {
+  color: #5a6272;
+}
+html[data-theme='light'] [class*='text-white/20'],
+html[data-theme='light'] [class*='text-white/10'] {
+  color: #737b8b;
+}
+
+/* 亮色：彩色/渐变按钮与黑底浮层上的文字仍用白色 */
+html[data-theme='light'] [class*='from-indigo'][class*='text-white'],
+html[data-theme='light'] [class*='from-emerald'][class*='text-white'],
+html[data-theme='light'] [class*='from-fuchsia'][class*='text-white'],
+html[data-theme='light'] [class*='to-indigo'][class*='text-white'],
+html[data-theme='light'] [class*='to-emerald'][class*='text-white'],
+html[data-theme='light'] [class*='bg-indigo-'][class*='text-white'],
+html[data-theme='light'] [class*='bg-emerald-'][class*='text-white'],
+html[data-theme='light'] [class*='bg-rose-'][class*='text-white'],
+html[data-theme='light'] [class*='bg-fuchsia-'][class*='text-white'],
+html[data-theme='light'] [class*='bg-amber-'][class*='text-white'],
+html[data-theme='light'] [class*='bg-red-'][class*='text-white'],
+html[data-theme='light'] [class*='bg-black/'][class*='text-white'] {
+  color: #ffffff;
+}
+
+/* 亮色：白字渐变标题（品牌/弹窗标题）改为纯深色文字，避免白底白字 */
+html[data-theme='light'] [class*='from-white'][class*='bg-clip-text'] {
+  background-image: none !important;
+  color: #232833 !important;
+  -webkit-text-fill-color: #232833 !important;
+}
+
+/* 亮色滚动条 */
 html[data-theme='light'] ::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.28);
+  background: rgba(15, 23, 42, 0.25);
   border-color: var(--gl-bg);
 }
 html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.38);
+}
+html[data-theme='light'] ::placeholder {
+  color: #8a919f;
 }
 
 html {
