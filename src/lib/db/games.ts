@@ -48,38 +48,33 @@ export function rowToGame(r: GameRow): LibraryGame {
   }
 }
 
-export function gameToRow(g: LibraryGame): Record<string, unknown> {
+/** 游戏写入列（位置参数，顺序固定） */
+const GAME_COLS =
+  'path_hash, folder_name, folder_path, file_count, exe_candidates, match_score, matched_types, root_path, saved_at, completed, completed_at, added_at, updated_at'
+
+function gameToParams(g: LibraryGame): Array<string | number | null> {
   const now = new Date().toISOString()
-  return {
-    path_hash: g.pathHash,
-    folder_name: g.folderName,
-    folder_path: g.folderPath,
-    file_count: g.fileCount ?? 0,
-    exe_candidates: JSON.stringify(Array.isArray(g.exeCandidates) ? g.exeCandidates : []),
-    match_score: typeof g.matchScore === 'number' ? g.matchScore : null,
-    matched_types:
-      Array.isArray(g.matchedTypes) && g.matchedTypes.length ? JSON.stringify(g.matchedTypes) : null,
-    root_path: g.rootPath || null,
-    saved_at: g.savedAt,
-    completed: g.completed === true ? 1 : 0,
-    completed_at: g.completedAt || null,
-    added_at: g.savedAt || now,
-    updated_at: now,
-  }
+  return [
+    g.pathHash,
+    g.folderName,
+    g.folderPath,
+    g.fileCount ?? 0,
+    JSON.stringify(Array.isArray(g.exeCandidates) ? g.exeCandidates : []),
+    typeof g.matchScore === 'number' ? g.matchScore : null,
+    Array.isArray(g.matchedTypes) && g.matchedTypes.length ? JSON.stringify(g.matchedTypes) : null,
+    g.rootPath || null,
+    g.savedAt,
+    g.completed === true ? 1 : 0,
+    g.completedAt || null,
+    g.savedAt || now,
+    now,
+  ]
 }
 
+const GAME_Q = Array.from({ length: 13 }, () => '?').join(', ')
+
 function insert(db: Database.Database, g: LibraryGame): void {
-  db.prepare(
-    `INSERT OR REPLACE INTO games (
-       path_hash, folder_name, folder_path, file_count, exe_candidates,
-       match_score, matched_types, root_path, saved_at, completed, completed_at,
-       added_at, updated_at
-     ) VALUES (
-       @path_hash, @folder_name, @folder_path, @file_count, @exe_candidates,
-       @match_score, @matched_types, @root_path, @saved_at, @completed, @completed_at,
-       @added_at, @updated_at
-     )`
-  ).run(gameToRow(g))
+  db.prepare(`INSERT OR REPLACE INTO games (${GAME_COLS}) VALUES (${GAME_Q})`).run(gameToParams(g))
 }
 
 export async function getAllGames(): Promise<LibraryGame[]> {
@@ -98,18 +93,8 @@ export async function getGameByHash(hash: string): Promise<LibraryGame | null> {
 export async function replaceAllGames(games: LibraryGame[]): Promise<void> {
   await withTransaction((db) => {
     db.prepare('DELETE FROM games').run()
-    const ins = db.prepare(
-      `INSERT INTO games (
-         path_hash, folder_name, folder_path, file_count, exe_candidates,
-         match_score, matched_types, root_path, saved_at, completed, completed_at,
-         added_at, updated_at
-       ) VALUES (
-         @path_hash, @folder_name, @folder_path, @file_count, @exe_candidates,
-         @match_score, @matched_types, @root_path, @saved_at, @completed, @completed_at,
-         @added_at, @updated_at
-       )`
-    )
-    for (const g of games) ins.run(gameToRow(g))
+    const ins = db.prepare(`INSERT INTO games (${GAME_COLS}) VALUES (${GAME_Q})`)
+    for (const g of games) ins.run(gameToParams(g))
   })
 }
 

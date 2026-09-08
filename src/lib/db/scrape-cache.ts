@@ -35,17 +35,21 @@ export function rowToEntry(r: CacheRow): CacheEntry {
   }
 }
 
-export function entryToRow(e: CacheEntry): Record<string, unknown> {
-  return {
-    cache_key: e.key,
-    schema_version: CACHE_SCHEMA,
-    name: e.name ?? e.key,
-    folder_path: e.folderPath ?? null,
-    scraped_at: e.scrapedAt,
-    success: e.success ? 1 : 0,
-    data_json: e.data == null ? 'null' : JSON.stringify(e.data),
-  }
+export function entryToParams(e: CacheEntry): Array<string | number | null> {
+  return [
+    e.key,
+    CACHE_SCHEMA,
+    e.name ?? e.key,
+    e.folderPath ?? null,
+    e.scrapedAt,
+    e.success ? 1 : 0,
+    e.data == null ? 'null' : JSON.stringify(e.data),
+  ]
 }
+
+const CACHE_COLS =
+  'cache_key, schema_version, name, folder_path, scraped_at, success, data_json'
+const CACHE_Q = Array.from({ length: 7 }, () => '?').join(', ')
 
 /** 新鲜度（同旧 core.isCacheFresh：成功 90 天 / 失败 3 天，且不晚于现在） */
 export function isCacheFresh(entry: CacheEntry): boolean {
@@ -67,12 +71,11 @@ export async function loadCacheFile(): Promise<CacheFile> {
   return { version: 1, updatedAt: new Date().toISOString(), games }
 }
 
-/** 单条写入（UPSERT，schema 强制 =2） */
+/** 单条写入（UPSERT，schema 强制 =2，位置参数） */
 export async function saveCacheEntry(entry: CacheEntry): Promise<void> {
   const db = await getDb()
   db.prepare(
-    `INSERT INTO scrape_cache (cache_key, schema_version, name, folder_path, scraped_at, success, data_json)
-     VALUES (@cache_key, @schema_version, @name, @folder_path, @scraped_at, @success, @data_json)
+    `INSERT INTO scrape_cache (${CACHE_COLS}) VALUES (${CACHE_Q})
      ON CONFLICT(cache_key) DO UPDATE SET
        schema_version = excluded.schema_version,
        name = excluded.name,
@@ -80,7 +83,7 @@ export async function saveCacheEntry(entry: CacheEntry): Promise<void> {
        scraped_at = excluded.scraped_at,
        success = excluded.success,
        data_json = excluded.data_json`
-  ).run(entryToRow({ ...entry, schema: CACHE_SCHEMA }))
+  ).run(entryToParams({ ...entry, schema: CACHE_SCHEMA }))
   void maybeAutoBackupDb()
 }
 
@@ -88,11 +91,8 @@ export async function saveCacheEntry(entry: CacheEntry): Promise<void> {
 export async function saveCacheGames(entries: Record<string, CacheEntry>): Promise<void> {
   await withTransaction((db) => {
     db.prepare('DELETE FROM scrape_cache').run()
-    const ins = db.prepare(
-      `INSERT INTO scrape_cache (cache_key, schema_version, name, folder_path, scraped_at, success, data_json)
-       VALUES (@cache_key, @schema_version, @name, @folder_path, @scraped_at, @success, @data_json)`
-    )
-    for (const e of Object.values(entries)) ins.run(entryToRow(e))
+    const ins = db.prepare(`INSERT INTO scrape_cache (${CACHE_COLS}) VALUES (${CACHE_Q})`)
+    for (const e of Object.values(entries)) ins.run(entryToParams(e))
   })
 }
 
