@@ -808,7 +808,11 @@ function GameCard({
           }}
           disabled={!hasExe || nd}
           title={nd ? '该游戏尚未下载到本地' : hasExe ? `启动 ${exePath!.split(/[\\/]/).pop()}` : '未找到可启动的 exe'}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:from-emerald-400 hover:to-emerald-500 disabled:from-white/10 disabled:to-white/10 disabled:text-white/35"
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition ${
+            nd
+              ? 'bg-gradient-to-r from-amber-500/25 to-amber-500/10 text-amber-200'
+              : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-sm hover:from-emerald-400 hover:to-emerald-500 disabled:from-white/10 disabled:to-white/10 disabled:text-white/35'
+          }`}
         >
           {/* [FIX] 任务二(a)：未下载时图标改高可见度颜色且不传 fill-current（线条图标禁止 fill） */}
           <Icon
