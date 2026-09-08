@@ -5,18 +5,20 @@ import { scrapeVndbByName } from './vndb'
 import { searchBangumi } from './bangumi'
 import { scrapeYmgalByName } from './ymgal'
 import { scrapeCngalByName } from './cngal'
+import { scrapeMoyuByName } from './moyu'
 import { fetchWithProxy, UA_STRING } from './fetch'
 import { loadCacheGames, saveCacheEntry, CACHE_SCHEMA } from './core'
 import { sleep } from './similarity'
 import type { CacheEntry } from './types'
 import type { GameData } from './source-types'
 
-/** 顺序刮削的数据源（模块 258 的 p） */
+/** 顺序刮削的数据源（模块 258 的 p，末位追加 moyu 兜底） */
 const SCRAPE_SOURCES = [
   { name: 'vndb', run: scrapeVndbByName },
   { name: 'bangumi', run: searchBangumi },
   { name: 'ymgal', run: scrapeYmgalByName },
   { name: 'cngal', run: scrapeCngalByName },
+  { name: 'moyu', run: scrapeMoyuByName },
 ] as const
 
 /**
@@ -71,7 +73,7 @@ export interface SequentialScrapeResult {
 }
 
 /**
- * 模块 258 的 f：按 vndb → bangumi → ymgal → cngal 顺序刮削，
+ * 模块 258 的 f：按 vndb → bangumi → ymgal → cngal → moyu 顺序刮削，
  * 源之间间隔 600ms；首个有结果的源即用；全部失败返回 success:false。
  * vndb 结果会额外调用 h() 补中文名与 Bangumi 评分。
  */

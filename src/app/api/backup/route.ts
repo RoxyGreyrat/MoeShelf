@@ -100,6 +100,10 @@ export async function POST(req: NextRequest) {
             typeof (g as Record<string, unknown>).completed === 'boolean'
               ? ((g as Record<string, unknown>).completed as boolean)
               : undefined,
+          completedAt:
+            typeof (g as Record<string, unknown>).completedAt === 'string'
+              ? ((g as Record<string, unknown>).completedAt as string)
+              : undefined,
           savedAt: typeof g.savedAt === 'string' ? g.savedAt : new Date().toISOString(),
         }) as unknown as LibraryGame
     )

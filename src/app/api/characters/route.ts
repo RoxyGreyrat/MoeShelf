@@ -68,6 +68,21 @@ async function fetchCharacters(input: {
   )
 }
 
+/** 给任意 Promise 加总超时；超时返回 null，不中断原请求 */
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>(resolve => {
+        timer = setTimeout(() => resolve(null), ms)
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 export async function GET(req: NextRequest) {
   const name = req.nextUrl.searchParams.get('name')?.trim() ?? ''
   const title = req.nextUrl.searchParams.get('title')?.trim() ?? ''
@@ -84,18 +99,26 @@ export async function GET(req: NextRequest) {
   if (source && id) {
     let characters: CharacterEntry[] = []
     try {
-      characters =
-        source === 'cngal'
-          ? await getCngalCharacters(Number(id))
-          : source === 'vndb'
-            ? await getVndbCharacters(id)
-            : source === 'ymgal'
-              ? await getYmgalCharacters(Number(id))
-              : await getBangumiCharacters(Number(id))
+      const picked = await withTimeout(
+        (async () =>
+          source === 'cngal'
+            ? await getCngalCharacters(Number(id))
+            : source === 'vndb'
+              ? await getVndbCharacters(id)
+              : source === 'ymgal'
+                ? await getYmgalCharacters(Number(id))
+                : await getBangumiCharacters(Number(id)))(),
+        15000
+      )
+      if (picked === null) {
+        return NextResponse.json({ ok: true, characters: [], timedOut: true })
+      }
+      characters = picked
     } catch {
       characters = []
     }
-    if (characters.length > 0 && entry?.data) {
+    // 空结果也写入缓存（[] 为真值，命中判断兼容），避免每次打开详情都重新抓取
+    if (entry?.data) {
       entry.data.characters = characters
       if (source === 'bangumi') entry.data.bgmSubjectId = Number(id)
       entry.scrapedAt = new Date().toISOString()
@@ -113,7 +136,7 @@ export async function GET(req: NextRequest) {
   let bgmSubjectId = entry?.data?.bgmSubjectId as number | null | undefined
   if (bgmSubjectId == null) {
     try {
-      const bangumi = await searchBangumi(name)
+      const bangumi = await withTimeout(searchBangumi(name), 10000)
       if (bangumi?.bgmSubjectId != null) {
         bgmSubjectId = bangumi.bgmSubjectId
         if (entry?.data) {
@@ -134,12 +157,20 @@ export async function GET(req: NextRequest) {
     entry?.data?.title,
   ].filter((n) => !!n && String(n).trim().length > 0) as string[]
 
-  const characters = await fetchCharacters({
-    vndbId: entry?.data?.vndbId,
-    bgmSubjectId: bgmSubjectId ?? undefined,
-    names,
-  })
-  if (characters.length > 0 && entry?.data) {
+  const picked = await withTimeout(
+    fetchCharacters({
+      vndbId: entry?.data?.vndbId,
+      bgmSubjectId: bgmSubjectId ?? undefined,
+      names,
+    }),
+    15000
+  )
+  if (picked === null) {
+    return NextResponse.json({ ok: true, cached: false, characters: [], timedOut: true })
+  }
+  const characters = picked
+  // 空结果也写入缓存，避免每次打开详情都重新抓取；超时不写缓存，下次可重试
+  if (entry?.data) {
     entry.data.characters = characters
     entry.scrapedAt = new Date().toISOString()
     try {

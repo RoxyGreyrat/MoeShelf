@@ -3,7 +3,7 @@
 // 对应编译产物：.next/server/chunks/147.js 与 scan/route.js 内嵌 2147。
 import fs from 'fs/promises'
 import path from 'path'
-import { pathHashOf } from './core'
+import { pathHashOf, resolveDataDir } from './core'
 import type { ExeCandidate } from './types'
 
 /** 工具/安装类 exe 名称（含中英文安装卸载补丁等，判定为非游戏程序） */
@@ -307,10 +307,11 @@ export async function scanRoot(root: string, filterMode: string): Promise<ScanRe
 
   await walk(root, 0)
 
-  // ignorePaths 过滤（直接读 data/settings.json，同编译产物）
+  // ignorePaths 过滤：读取“当前生效的数据目录”（location.json 重定向也生效）
   await (async () => {
     try {
-      const text = await fs.readFile(path.join(process.cwd(), 'data', 'settings.json'), 'utf-8')
+      const dir = await resolveDataDir()
+      const text = await fs.readFile(path.join(dir, 'settings.json'), 'utf-8')
       const parsed = JSON.parse(text)
       const ignore = parsed.ignorePaths || []
       if (ignore.length) {
@@ -329,7 +330,8 @@ export async function scanRoot(root: string, filterMode: string): Promise<ScanRe
   let removedPaths: string[] = []
   await (async () => {
     try {
-      const text = await fs.readFile(path.join(process.cwd(), 'data', 'library.json'), 'utf-8')
+      const dir = await resolveDataDir()
+      const text = await fs.readFile(path.join(dir, 'library.json'), 'utf-8')
       const parsed = JSON.parse(text)
       const libGames: Array<{ folderPath?: string; pathHash?: string }> = Array.isArray(parsed.games)
         ? parsed.games

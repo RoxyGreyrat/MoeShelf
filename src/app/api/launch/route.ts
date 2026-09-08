@@ -1,5 +1,6 @@
 // /api/launch —— 启动游戏并统计游玩时长（S1 依据编译产物模块 4925 + 667 + 2849 重建）。
 import { spawn } from 'child_process'
+import fs from 'fs/promises'
 import path from 'path'
 import { NextResponse } from 'next/server'
 import { accumulatePlaytime, isPathAllowed, PATH_DENIED_REASON } from '@/lib/core'
@@ -47,7 +48,20 @@ export async function POST(req: Request) {
     }
     const resolved = path.resolve(exePath)
     const cwd = path.dirname(resolved)
-    const child = spawn(resolved, [], { cwd, detached: true, stdio: 'ignore', windowsHide: false })
+    const st = await fs.stat(resolved).catch(() => null)
+    if (!st?.isFile()) {
+      return NextResponse.json({ ok: false, error: '启动文件不存在或不是文件' }, { status: 404 })
+    }
+    const ext = path.extname(resolved).toLowerCase()
+    const isScript = process.platform === 'win32' && (ext === '.bat' || ext === '.cmd')
+    const child = isScript
+      ? spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/c', resolved], {
+          cwd,
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: false,
+        })
+      : spawn(resolved, [], { cwd, detached: true, stdio: 'ignore', windowsHide: false })
     const pid = child.pid ?? 0
     if (hash) running.set(pid, { hash, start: Date.now(), saved: 0 })
     child.on('error', (e: Error) => {

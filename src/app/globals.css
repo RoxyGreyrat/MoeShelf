@@ -38,6 +38,11 @@ html {
   filter: grayscale(100%);
 }
 .r18-blur {
+  filter: blur(10px);
+  -webkit-filter: blur(10px);
+}
+/* 未下载 + NSFW 同时存在时：灰度 + 模糊叠加（避免 .r18-blur 覆盖掉 .grayscale 的灰度） */
+.grayscale.r18-blur {
   filter: grayscale(100%) blur(10px);
   -webkit-filter: grayscale(100%) blur(10px);
 }

@@ -18,6 +18,7 @@ export interface GameData {
   vndbId?: string
   vndbUrl?: string
   sourceUrl?: string
+  sexual?: number
   bgmRating?: number
   bgmVotes?: number
   bgmSubjectId?: number

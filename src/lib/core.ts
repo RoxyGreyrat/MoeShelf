@@ -53,20 +53,22 @@ export async function resolveDataDir(): Promise<string> {
 
 /**
  * 模块 8621 Sl：把数据目录迁移到新路径。
- * 先把默认目录下四个 json 与 cache/images 复制到目标目录（已有文件才复制），
- * 再写 location.json 并更新缓存，返回新目录。
+ * 从“当前正在使用的数据目录”（location.json 重定向后也算）复制四个 json
+ * 与 cache/images 到目标目录，再写 location.json 并更新缓存，返回新目录。
+ * 修复 1.5.2：旧实现总是从默认目录复制，第二次迁移会复制到旧数据。
  */
 export async function changeDataDir(newPath: string): Promise<string> {
   const target = path.resolve(newPath)
+  const current = await resolveDataDir()
   await fs.mkdir(target, { recursive: true })
   for (const name of ['settings.json', 'cache.json', 'library.json', 'playtime.json']) {
-    const src = path.join(DEFAULT_DATA_DIR, name)
+    const src = path.join(current, name)
     const dst = path.join(target, name)
     if (await fs.stat(src).catch(() => null)) {
       await fs.copyFile(src, dst).catch(() => {})
     }
   }
-  const srcImages = path.join(DEFAULT_DATA_DIR, 'cache', 'images')
+  const srcImages = path.join(current, 'cache', 'images')
   const dstImages = path.join(target, 'cache', 'images')
   if (await fs.stat(srcImages).catch(() => null)) {
     await fs.mkdir(dstImages, { recursive: true })
@@ -156,7 +158,6 @@ const SETTINGS_DEFAULTS: Settings = {
   titleMap: {},
   devMap: {},
   proxy: '',
-  showBgmRating: true,
   ignorePaths: [],
 }
 
@@ -185,7 +186,6 @@ export async function loadSettings(): Promise<Settings> {
       titleMap: parsed.titleMap && typeof parsed.titleMap === 'object' ? parsed.titleMap : {},
       devMap: parsed.devMap && typeof parsed.devMap === 'object' ? parsed.devMap : {},
       proxy: typeof parsed.proxy === 'string' ? parsed.proxy : '',
-      showBgmRating: typeof parsed.showBgmRating !== 'boolean' || parsed.showBgmRating,
       ignorePaths: parsed.ignorePaths && Array.isArray(parsed.ignorePaths) ? parsed.ignorePaths : [],
     }
   } catch {
@@ -212,8 +212,6 @@ export async function updateSettings(patch: Partial<Settings>): Promise<Settings
       patch.titleMap && typeof patch.titleMap === 'object' ? patch.titleMap : current.titleMap,
     devMap: patch.devMap && typeof patch.devMap === 'object' ? patch.devMap : current.devMap,
     proxy: typeof patch.proxy === 'string' ? patch.proxy.trim() : current.proxy,
-    showBgmRating:
-      typeof patch.showBgmRating === 'boolean' ? patch.showBgmRating : current.showBgmRating,
     ignorePaths: Array.isArray(patch.ignorePaths) ? patch.ignorePaths : current.ignorePaths,
   }
   settingsCache = merged
@@ -305,6 +303,16 @@ export function saveCacheEntry(entry: CacheEntry): Promise<void> {
   const task = cacheQueue.then(async () => {
     const games = await loadCacheGames()
     games[entry.key] = { ...entry, schema: CACHE_SCHEMA }
+    const file = path.join(await resolveDataDir(), 'cache.json')
+    await writeJsonAtomic(file, { version: 1, updatedAt: new Date().toISOString(), games })
+  })
+  cacheQueue = task.catch(() => {})
+  return task
+}
+
+/** 整体写回缓存 games（供迁移等批量操作使用） */
+export function saveCacheGames(games: Record<string, CacheEntry>): Promise<void> {
+  const task = cacheQueue.then(async () => {
     const file = path.join(await resolveDataDir(), 'cache.json')
     await writeJsonAtomic(file, { version: 1, updatedAt: new Date().toISOString(), games })
   })
@@ -419,6 +427,100 @@ export function pathHashOf(p: string): string {
 /** 缓存键构建：`${folderName}::${pathHash}`（同 644 kw） */
 export function cacheKeyOf(folderName: string, pathHash: string): string {
   return `${folderName}::${pathHash}`
+}
+
+/**
+ * 修改游戏路径后迁移旧 pathHash 关联的数据：
+ * settings 里的 exe/cover/title/dev 映射、playtime、以及刮削缓存键。
+ * 1.5.2 新增：修改路径不再丢失自定义启动程序/封面/标题/厂商与游玩时长。
+ */
+export async function migrateGameAssociations(
+  oldHash: string,
+  newHash: string,
+  newFolderName: string,
+  newFolderPath?: string,
+  newExeCandidates?: Array<{ name?: string; path?: string }>
+): Promise<void> {
+  if (!oldHash || !newHash || oldHash === newHash) return
+
+  const fileBase = (p?: string) => (p ? p.split(/[\\/]/).pop() : '')
+
+  // 1) settings 映射
+  try {
+    const settings = await loadSettings()
+    let replacementExePath = settings.exeMap[oldHash]
+    if (typeof replacementExePath === 'string' && newExeCandidates?.length) {
+      const oldBase = fileBase(replacementExePath)
+      const match = newExeCandidates.find(
+        c => typeof c.path === 'string' && fileBase(c.path) === oldBase
+      )
+      replacementExePath =
+        (match && typeof match.path === 'string' ? match.path : undefined) ||
+        newExeCandidates[0]?.path ||
+        replacementExePath
+    }
+    const maps = [settings.exeMap, settings.coverMap, settings.titleMap, settings.devMap]
+    let changed = false
+    for (const map of maps) {
+      if (Object.prototype.hasOwnProperty.call(map, oldHash)) {
+        if (!Object.prototype.hasOwnProperty.call(map, newHash)) {
+          map[newHash] =
+            map === settings.exeMap && typeof replacementExePath === 'string'
+              ? replacementExePath
+              : map[oldHash]
+        }
+        delete map[oldHash]
+        changed = true
+      }
+    }
+    if (changed) await saveSettings(settings)
+  } catch {
+    // 映射迁移失败不影响路径修改本身
+  }
+
+  // 2) 游玩时长
+  try {
+    const playtime = await loadPlaytime()
+    const old = playtime.games[oldHash]
+    if (old) {
+      const cur = playtime.games[newHash]
+      playtime.games[newHash] = {
+        minutes: Math.round(((cur?.minutes ?? 0) + (old.minutes ?? 0)) * 10) / 10,
+        sessions: (cur?.sessions ?? 0) + (old.sessions ?? 0),
+        lastPlayed: [cur?.lastPlayed ?? '', old.lastPlayed ?? '']
+          .filter(Boolean)
+          .sort()
+          .pop() || '',
+      }
+      delete playtime.games[oldHash]
+      await savePlaytime(playtime)
+    }
+  } catch {
+    // 游玩时长迁移失败不影响路径修改本身
+  }
+
+  // 3) 刮削缓存键（folderName::pathHash）
+  try {
+    const all = await loadCacheGames()
+    const newKey = cacheKeyOf(newFolderName, newHash)
+    let moved = false
+    for (const key of Object.keys(all)) {
+      if (key.endsWith(`::${oldHash}`) && key !== newKey && !all[newKey]) {
+        all[newKey] = {
+          ...all[key],
+          key: newKey,
+          name: newFolderName || all[key].name,
+          folderPath: newFolderPath || all[key].folderPath,
+        }
+        delete all[key]
+        moved = true
+        break
+      }
+    }
+    if (moved) await saveCacheGames(all)
+  } catch {
+    // 缓存迁移失败只意味着下次会重新刮削
+  }
 }
 
 // ============ 模块 2849：路径安全校验 ============

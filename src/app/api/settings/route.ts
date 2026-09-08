@@ -21,7 +21,6 @@ export async function POST(req: Request) {
       titleMap: body.titleMap as Record<string, string> | undefined,
       devMap: body.devMap as Record<string, string> | undefined,
       proxy: typeof body.proxy === 'string' ? body.proxy.trim() : undefined,
-      showBgmRating: typeof body.showBgmRating === 'boolean' ? body.showBgmRating : undefined,
       ignorePaths: Array.isArray(body.ignorePaths) ? body.ignorePaths : undefined,
     })
     return NextResponse.json({ ok: true, settings })

@@ -125,6 +125,7 @@ const SOURCE_LABELS: Record<string, string> = {
   bangumi: 'Bangumi',
   ymgal: 'YMgal',
   cngal: 'CnGal',
+  moyu: 'Moyu',
 }
 
 const cnMap: Record<string, string> = {}
@@ -133,6 +134,18 @@ let nsfwBlur = true
 try {
   nsfwBlur = '0' !== (localStorage.getItem('gl-nsfw-blur') || '1')
 } catch (e) {}
+
+// 代理回退提示：整个页面会话只提示一次（后台自动补全/重试失败时静默，
+// 用户手动操作触发时才给提示；代理恢复后下次会话可再次提示）
+let proxyFallbackToastShown = false
+function toastProxyFallback(push: (message: string, type?: 'success' | 'error' | 'info') => void) {
+  if (proxyFallbackToastShown) return
+  proxyFallbackToastShown = true
+  try {
+    localStorage.setItem('gl-proxy-toast-at', String(Date.now()))
+  } catch (e) {}
+  push('代理不可用，已尝试直连', 'info')
+}
 
 const YEAR_PREFIX = /^(?:19|20)\d{2}[年.\-/]\d{1,2}/
 
@@ -154,11 +167,6 @@ function formatRelease(released?: string | null): string {
   return `${year}${month ? '-' + month.padStart(2, '0') : ''}${day ? '-' + day.padStart(2, '0') : ''}`
 }
 
-function releaseYear(game: Game): string | null {
-  const m = game.metadata?.released?.match(/^(\d{4})/)
-  return m ? m[1] : null
-}
-
 function displayTitle(game: Game): string {
   const custom = game.customTitle?.trim()
   if (custom) return custom
@@ -171,6 +179,15 @@ function displayTitle(game: Game): string {
   const title = game.metadata?.title?.trim()
   if (title) return title
   return game.folderName
+}
+
+/** 是否为 NSFW 游戏（sexual 超标或 VNDB 标记），与卡片/弹窗的模糊判定一致 */
+function isNsfwGame(game: Game): boolean {
+  const metadata = game.metadata
+  return (
+    ((metadata?.sexual ?? 0) as number) > 0.5 ||
+    (!!metadata?.vndbId && nsfwMap[metadata.vndbId] >= 2)
+  )
 }
 
 function formatDuration(minutes?: number | null): string | null {
@@ -280,9 +297,8 @@ function colorFor(name: string): [string, string] {
   return COLOR_PAIRS[parseInt(djb2Hash(name), 16) % COLOR_PAIRS.length]
 }
 
-function matchesFilter(game: Game, query: string, filter: { kind: string; name?: string; year?: string }): boolean {
+function matchesFilter(game: Game, query: string, filter: { kind: 'all' | 'dev'; name?: string }): boolean {
   if (filter.kind === 'dev' && normalizeDev(devName(game)) !== filter.name) return false
-  if (filter.kind === 'year' && releaseYear(game) !== filter.year) return false
   if (query) {
     const title = displayTitle(game).toLowerCase()
     const original = (game.metadata?.originalTitle ?? '').toLowerCase()
@@ -292,10 +308,6 @@ function matchesFilter(game: Game, query: string, filter: { kind: string; name?:
       return false
   }
   return true
-}
-
-function yearLabel(year: string): string {
-  return year === '年份未知' ? '年份未知' : `${year} 年`
 }
 
 // ---------------------------------------------------------------------------
@@ -542,7 +554,8 @@ function GameCard({
   onRemove,
   isFav = false,
   onToggleFav = () => {},
-  showBgmRating = true,
+  nsfwOff = false,
+  onToggleNsfw = () => {},
 }: {
   game: Game
   onOpen: () => void
@@ -552,7 +565,8 @@ function GameCard({
   onRemove: () => void
   isFav?: boolean
   onToggleFav?: () => void
-  showBgmRating?: boolean
+  nsfwOff?: boolean
+  onToggleNsfw?: () => void
 }) {
   const metadata = game.metadata
   const title = displayTitle(game)
@@ -562,12 +576,9 @@ function GameCard({
   const duration = formatDuration(game.playtimeMinutes)
   const exePath = game.selectedExe ?? game.exeCandidates[0]?.path
   const hasExe = !!exePath
-  const bgmScore =
-    showBgmRating && metadata?.bgmRating && metadata.bgmRating > 0 ? (metadata.bgmRating / 10).toFixed(1) : null
   const nd = game.notDownloaded === true
-  const n18 =
-    (nsfwBlur && ((metadata?.sexual ?? 0) as number) > 0.5) ||
-    (nsfwBlur && !!metadata?.vndbId && nsfwMap[metadata.vndbId] >= 2)
+  const isNsfw = isNsfwGame(game)
+  const n18 = nsfwBlur && isNsfw && !nsfwOff
 
   return (
     <div
@@ -578,13 +589,14 @@ function GameCard({
       className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.03] transition-all duration-300 hover:-translate-y-1.5 hover:border-indigo-400/40 hover:bg-white/[0.05] hover:shadow-[0_16px_48px_-12px_rgba(99,102,241,0.4)] focus-visible:outline-2 focus-visible:outline-indigo-400"
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-ink-800">
-        <CoverPlaceholder name={title} />
-        {coverUrl && (
+        {coverUrl ? (
           <CoverImage
             url={coverUrl}
             alt={title}
             className={`transition-transform duration-500 group-hover:scale-[1.06]${nd ? ' grayscale' : ''}${n18 ? ' r18-blur' : ''}`}
           />
+        ) : (
+          <CoverPlaceholder name={title} />
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
         {nd && <div className="pointer-events-none absolute inset-0 bg-slate-900/40" />}
@@ -592,6 +604,15 @@ function GameCard({
           <span className="absolute left-2 top-10 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium text-white/85 backdrop-blur">
             未下载
           </span>
+        )}
+        {game.completed === true && (
+          <div className="pointer-events-none absolute right-2 top-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/55 shadow-[0_0_12px_rgba(245,197,66,0.35)] ring-1 ring-amber-200/40 backdrop-blur-md">
+            <Icon
+              name="check"
+              className="h-3.5 w-3.5 text-amber-300 drop-shadow-[0_0_6px_rgba(245,197,66,0.8)]"
+              strokeWidth={3}
+            />
+          </div>
         )}
         <button
           title={isFav ? '取消收藏' : '收藏'}
@@ -601,15 +622,7 @@ function GameCard({
             onToggleFav()
           }}
           className="absolute left-2 top-2 z-[1] flex h-7 w-7 items-center justify-center rounded-full text-yellow-400 backdrop-blur transition"
-          style={
-            isFav
-              ? {
-                  color: '#facc15',
-                  backgroundColor: 'rgba(250, 204, 21, 0.22)',
-                  boxShadow: '0 0 12px 2px rgba(250, 204, 21, 0.35)',
-                }
-              : { color: '#facc15', backgroundColor: 'rgba(0, 0, 0, 0.65)' }
-          }
+          style={{ color: '#facc15', backgroundColor: 'rgba(0, 0, 0, 0.65)' }}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -646,27 +659,35 @@ function GameCard({
             </span>
           </div>
         )}
+        {isNsfw && nsfwBlur && (
+          <button
+            title={n18 ? '查看封面（取消该游戏的模糊）' : '恢复该游戏的封面模糊'}
+            aria-label={n18 ? '取消该游戏的封面模糊' : '恢复该游戏的封面模糊'}
+            onClick={e => {
+              e.stopPropagation()
+              onToggleNsfw()
+            }}
+            className="absolute bottom-2 left-2 z-[1] flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white/85 backdrop-blur transition hover:bg-indigo-500/90 hover:text-white"
+          >
+            <Icon name={n18 ? 'eye' : 'eyeOff'} className="h-4 w-4" />
+          </button>
+        )}
         {game.status === 'scraping' && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[2px]">
             <Spinner className="h-6 w-6" />
           </div>
         )}
         {game.status === 'error' && (
-          <span className="absolute left-2 top-2 rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-medium text-white">
-            获取失败
+          <span
+            className="absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-medium text-white"
+            title={game.error ?? '获取失败'}
+          >
+            {game.error || '获取失败'}
           </span>
         )}
         {game.status === 'done' && !coverUrl && (
           <span className="absolute left-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white/70">
             暂无封面
-          </span>
-        )}
-        {bgmScore && (
-          <span
-            className="absolute right-2 top-2 z-10 rounded-full bg-gradient-to-r from-sky-500/95 to-cyan-500/95 px-2 py-0.5 text-[10px] font-semibold text-white shadow-lg backdrop-blur"
-            title={`Bangumi 评分 ${bgmScore}（${(metadata?.bgmVotes ?? 0).toLocaleString()} 票）`}
-          >
-            BGM {bgmScore}
           </span>
         )}
         <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
@@ -755,7 +776,7 @@ function GameCard({
 // 搜索结果条目（修正条目 / 手动匹配）
 // ---------------------------------------------------------------------------
 
-const CANDIDATE_SOURCES = ['vndb', 'bangumi', 'ymgal', 'cngal']
+const CANDIDATE_SOURCES = ['vndb', 'bangumi', 'ymgal', 'cngal', 'moyu']
 
 function SearchCandidateRow({
   c,
@@ -769,8 +790,7 @@ function SearchCandidateRow({
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-2 transition hover:border-indigo-400/30">
       <div className="relative h-11 w-8 shrink-0 overflow-hidden rounded bg-ink-800">
-        <CoverPlaceholder name={c.title} />
-        {c.coverUrl && <CoverImage url={c.coverUrl} alt={c.title} />}
+        {c.coverUrl ? <CoverImage url={c.coverUrl} alt={c.title} /> : <CoverPlaceholder name={c.title} />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-medium text-white/85">{c.title}</p>
@@ -844,6 +864,8 @@ function GameDetailModal({
   onRelocate,
   onSetWebCustom,
   onSetCompleted,
+  nsfwOff = false,
+  onToggleNsfw = () => {},
 }: {
   game: Game | null
   onClose: () => void
@@ -860,6 +882,8 @@ function GameDetailModal({
   onRelocate: (game: Game, path: string) => Promise<{ ok: boolean; title?: string; error?: string }>
   onSetWebCustom: (hash: string, patch: WebCustomPatch) => void
   onSetCompleted?: (hash: string, completed: boolean) => void
+  nsfwOff?: boolean
+  onToggleNsfw?: () => void
 }) {
   const [rescrapeBusy, setRescrapeBusy] = useState(false)
   const [launchBusy, setLaunchBusy] = useState(false)
@@ -895,6 +919,10 @@ function GameDetailModal({
   const [charBusy, setCharBusy] = useState(false)
   const [charError, setCharError] = useState<string | null>(null)
   const [charMsg, setCharMsg] = useState<string | null>(null)
+  // 防重入：同一游戏的角色/中文简介请求在途时不再重复发起
+  const charFetchRef = useRef<string | null>(null)
+  const cnFetchRef = useRef<string | null>(null)
+  const { push } = useToast()
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -918,97 +946,103 @@ function GameDetailModal({
     } else setPathMsg(res.error || '验证失败')
   }
 
-  if (!game) return null
-  const v = game
-
-  const nd = v.notDownloaded === true
-  const metadata = v.metadata
-  const n18 =
-    (nsfwBlur && ((metadata?.sexual ?? 0) as number) > 0.5) ||
-    (nsfwBlur && !!metadata?.vndbId && nsfwMap[metadata.vndbId] >= 2)
-  const title = displayTitle(v)
-  const officialCnTitle = metadata?.officialCnTitle && metadata.officialCnTitle !== title ? metadata.officialCnTitle : null
-  const coverUrl = v.customCover ?? metadata?.coverUrl ?? undefined
-  const completed = v.completed === true
-  const dev = devName(v)
+  const nd = game?.notDownloaded === true
+  const metadata = game?.metadata
+  const n18 = !!game && nsfwBlur && isNsfwGame(game) && !nsfwOff
+  const title = game ? displayTitle(game) : ''
+  const officialCnTitle =
+    game && metadata?.officialCnTitle && metadata.officialCnTitle !== title ? metadata.officialCnTitle : null
+  const coverUrl = game ? game.customCover ?? metadata?.coverUrl ?? undefined : undefined
+  const completed = game?.completed === true
+  const dev = game ? devName(game) : undefined
   const ratingDisplay = metadata?.rating != null && metadata.rating > 0 ? (metadata.rating / 10).toFixed(2) : null
-  const bgmDisplay = metadata?.bgmRating && metadata.bgmRating > 0 ? (metadata.bgmRating / 10).toFixed(1) : null
-  const duration = formatDuration(v.playtimeMinutes)
+  const duration = formatDuration(game?.playtimeMinutes)
   const description = metadata?.cnDescription
     ? stripVndbTags(metadata.cnDescription)
     : metadata?.description
       ? stripVndbTags(metadata.description)
       : ''
-  const exeCandidates = v.exeCandidates ?? []
-  const currentExe = v.selectedExe ?? exeCandidates[0]?.path ?? null
+  const exeCandidates = game?.exeCandidates ?? []
+  const currentExe = game ? game.selectedExe ?? exeCandidates[0]?.path ?? null : null
   const exeFileName = currentExe ? currentExe.split(/[\\/]/).pop() : null
+
+  const v = game
 
   const handleSetTitle: (game: Game, title: string) => Promise<boolean> = nd
     ? (_g, val) => {
-        void onSetWebCustom(v.pathHash, { customTitle: val })
+        void onSetWebCustom(v?.pathHash ?? '', { customTitle: val })
         return Promise.resolve(true)
       }
     : onSetTitle
   const handleSetCover: (game: Game, url: string | null) => Promise<boolean> = nd
     ? (_g, url) => {
-        void onSetWebCustom(v.pathHash, { customCover: url ?? undefined })
+        void onSetWebCustom(v?.pathHash ?? '', { customCover: url ?? undefined })
         return Promise.resolve(true)
       }
     : onSetCover
   const handleSetDev: (game: Game, dev: string) => Promise<boolean> = nd
     ? (_g, val) => {
-        void onSetWebCustom(v.pathHash, { customDeveloper: val })
+        void onSetWebCustom(v?.pathHash ?? '', { customDeveloper: val })
         return Promise.resolve(true)
       }
     : onSetDev
 
   // 角色自动获取
   useEffect(() => {
-    if (!v) return
-    const existing = v.metadata?.characters
+    if (!game) return
+    const existing = game.metadata?.characters
     if (existing) {
       setCharacters(existing)
       setCharLoading(false)
       return
     }
-    if (v.metadata) {
+    if (game.metadata) {
+      if (charFetchRef.current === game.pathHash) return
+      charFetchRef.current = game.pathHash
       setCharLoading(true)
       setCharLoaded(false)
       ;(async () => {
         try {
           const resp = await fetch(
-            `/api/characters?name=${encodeURIComponent(v.folderName)}&hash=${encodeURIComponent(v.pathHash)}&title=${encodeURIComponent(v.metadata?.title ?? '')}`,
+            `/api/characters?name=${encodeURIComponent(game.folderName)}&hash=${encodeURIComponent(game.pathHash)}&title=${encodeURIComponent(game.metadata?.title ?? '')}`,
           )
           const json = await resp.json()
           if (json.ok) {
             setCharacters(json.characters ?? [])
-            if (json.characters?.length) onCharacters?.(v, json.characters)
+            // 空结果也回写（标记该游戏已查过角色），避免每次打开都重新请求
+            onCharacters?.(game, json.characters ?? [])
           } else setCharacters([])
         } catch (e) {
           setCharacters([])
         }
+        charFetchRef.current = null
         setCharLoading(false)
         setCharLoaded(true)
       })()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v?.pathHash, v?.metadata])
+  }, [game?.pathHash, game?.metadata])
 
   // 中文简介补全
   useEffect(() => {
-    if (v?.metadata && v.metadata.cnDescription === undefined) {
+    if (game?.metadata && game.metadata.cnDescription === undefined) {
+      if (cnFetchRef.current === game.pathHash) return
+      cnFetchRef.current = game.pathHash
       ;(async () => {
         try {
           const resp = await fetch(
-            `/api/cn-description?name=${encodeURIComponent(v.folderName)}&hash=${encodeURIComponent(v.pathHash)}&title=${encodeURIComponent(v.metadata?.title ?? '')}`,
+            `/api/cn-description?name=${encodeURIComponent(game.folderName)}&hash=${encodeURIComponent(game.pathHash)}&title=${encodeURIComponent(game.metadata?.title ?? '')}`,
           )
           const json = await resp.json()
-          if (json.ok && json.description) onCnDescription?.(v, json.description)
+          if (json.ok) onCnDescription?.(game, json.description ?? '')
         } catch (e) {}
+        cnFetchRef.current = null
       })()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v?.pathHash, v?.metadata])
+  }, [game?.pathHash, game?.metadata])
+
+  if (!v) return null
 
   const doRescrape = async () => {
     setRescrapeBusy(true)
@@ -1050,6 +1084,7 @@ function GameDetailModal({
         signal: controller.signal,
       })
       const json = await resp.json()
+      if (json.proxyFallback) toastProxyFallback(push)
       if (json.ok) {
         if (json.results) setFixAllResults(json.results ?? [])
         else setFixCandidates(json.candidates ?? [])
@@ -1084,6 +1119,7 @@ function GameDetailModal({
     try {
       const resp = await fetch(`/api/covers?vndbId=${encodeURIComponent(metadata?.vndbId ?? '')}&current=${encodeURIComponent(coverUrl ?? '')}`)
       const json = await resp.json()
+      if (json.proxyFallback) toastProxyFallback(push)
       if (json.ok) setCoverList(json.covers ?? [])
       else setCoverError(json.error ?? '加载失败')
     } catch (e) {
@@ -1188,7 +1224,7 @@ function GameDetailModal({
         setCharacters(json.characters)
         setCharLoaded(true)
         onCharacters?.(v, json.characters)
-        setCharMsg(`已从 ${charSource === 'bangumi' ? 'Bangumi' : 'CnGal'} 获取 ${json.characters.length} 个角色`)
+        setCharMsg(`已从 ${SOURCE_LABELS[charSource] ?? charSource} 获取 ${json.characters.length} 个角色`)
       } else setCharError('该词条下未找到角色数据，换个词条试试')
     } catch (e) {
       setCharError('拉取失败，请重试')
@@ -1202,14 +1238,6 @@ function GameDetailModal({
         <span className="rounded-lg bg-amber-400/10 px-2 py-1 text-amber-300">
           ★ {ratingDisplay}
           {metadata?.votecount ? `（${metadata.votecount.toLocaleString()}票）` : ''}
-        </span>
-      )}
-      {bgmDisplay && (
-        <span
-          className="rounded-lg bg-blue-500/10 px-2 py-1 text-blue-300"
-          title={metadata?.bgmVotes ? `${metadata.bgmVotes.toLocaleString()}票` : undefined}
-        >
-          BGM {bgmDisplay}
         </span>
       )}
       {dev && (
@@ -1245,8 +1273,11 @@ function GameDetailModal({
           <div className="flex flex-col md:flex-row">
             <div className="relative hidden md:block md:w-72 md:shrink-0">
               <div className="absolute inset-0 overflow-hidden md:rounded-l-2xl">
-                <CoverPlaceholder name={title} />
-                {coverUrl && <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />}
+                {coverUrl ? (
+                  <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
+                ) : (
+                  <CoverPlaceholder name={title} />
+                )}
                 {nd && <div className="pointer-events-none absolute inset-0 bg-slate-900/40" />}
                 {nd && (
                   <span className="absolute left-2 top-2 z-[1] rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium text-white/85 backdrop-blur">
@@ -1255,8 +1286,14 @@ function GameDetailModal({
                 )}
                 {n18 && (
                   <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
-                    <span
-                      className="text-2xl font-black tracking-widest text-white/85"
+                    <button
+                      title="点击查看封面（取消该游戏的模糊）"
+                      aria-label="取消该游戏的封面模糊"
+                      onClick={e => {
+                        e.stopPropagation()
+                        onToggleNsfw()
+                      }}
+                      className="pointer-events-auto cursor-pointer border-0 text-2xl font-black tracking-widest text-white/85 transition hover:scale-105 hover:bg-black/70"
                       style={{
                         fontFamily: "Arial, 'Helvetica Neue', sans-serif",
                         fontSize: '17px',
@@ -1270,7 +1307,7 @@ function GameDetailModal({
                       }}
                     >
                       NSFW
-                    </span>
+                    </button>
                   </div>
                 )}
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" />
@@ -1283,13 +1320,22 @@ function GameDetailModal({
             </div>
             <div className="flex gap-3 p-4 pb-0 md:hidden">
               <div className="relative aspect-[3/4] w-28 shrink-0 overflow-hidden rounded-xl bg-ink-800">
-                <CoverPlaceholder name={title} />
-                {coverUrl && <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />}
+                {coverUrl ? (
+                  <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
+                ) : (
+                  <CoverPlaceholder name={title} />
+                )}
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
                 {n18 && (
                   <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
-                    <span
-                      className="text-2xl font-black tracking-widest text-white/85"
+                    <button
+                      title="点击查看封面（取消该游戏的模糊）"
+                      aria-label="取消该游戏的封面模糊"
+                      onClick={e => {
+                        e.stopPropagation()
+                        onToggleNsfw()
+                      }}
+                      className="pointer-events-auto cursor-pointer border-0 text-2xl font-black tracking-widest text-white/85 transition hover:scale-105 hover:bg-black/70"
                       style={{
                         fontFamily: "Arial, 'Helvetica Neue', sans-serif",
                         fontSize: '17px',
@@ -1303,7 +1349,7 @@ function GameDetailModal({
                       }}
                     >
                       NSFW
-                    </span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -1410,8 +1456,7 @@ function GameDetailModal({
                       {characters.map((c, i) => (
                         <div key={`${c.name}-${i}`} className="w-20 shrink-0">
                           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-ink-800">
-                            <CoverPlaceholder name={c.name || '?'} />
-                            {c.image && <CoverImage url={c.image} alt={c.name} />}
+                            {c.image ? <CoverImage url={c.image} alt={c.name} /> : <CoverPlaceholder name={c.name || '?'} />}
                           </div>
                           <p className="mt-1 truncate text-[11px] font-medium text-white/80" title={c.name}>
                             {c.name}
@@ -1607,12 +1652,11 @@ function GameDetailModal({
                               <button
                                 key={i}
                                 onClick={() => void pickCover(c.url)}
-                                className={`relative aspect-[3/4] overflow-hidden rounded-lg transition ${
+                                className={`relative aspect-[3/4] overflow-hidden rounded-lg bg-ink-800 transition ${
                                   current ? 'ring-2 ring-emerald-400' : 'hover:ring-1 hover:ring-white/30'
                                 }`}
                                 title={`${c.released ?? ''} ${c.relTitle ?? ''}`}
                               >
-                                <CoverPlaceholder name={title} />
                                 <CoverImage url={c.url} alt={title} />
                                 {current && (
                                   <span className="absolute left-1 top-1 rounded bg-emerald-500/90 px-1 py-0.5 text-[9px] text-white">
@@ -1661,7 +1705,7 @@ function GameDetailModal({
                     active={section === 'fix'}
                     icon="search"
                     label="修正条目"
-                    desc="匹配错误时从四个数据源重选"
+                    desc="匹配错误时从五个数据源重选"
                     onClick={() => toggleSection('fix')}
                   />
                   {section === 'fix' && (
@@ -1705,7 +1749,7 @@ function GameDetailModal({
                         </div>
                       )}
                       {!fixBusy && searchSource === 'all' && fixAllResults !== null && (fixAllResults.every(g => g.candidates.length === 0) ? (
-                        <p className="py-2 text-center text-xs text-white/30">四个数据源都未找到结果，换个关键词试试</p>
+                        <p className="py-2 text-center text-xs text-white/30">五个数据源都未找到结果，换个关键词试试</p>
                       ) : (
                         <div className="max-h-44 space-y-2 overflow-y-auto">
                           {fixAllResults.map(g =>
@@ -2144,19 +2188,17 @@ function SettingsModal({
   onClose,
   settings,
   onSaveRootPath,
-  showBgmRating,
-  onToggleBgmRating,
   games,
   favHashes,
+  onNsfwBlurChange,
 }: {
   open: boolean
   onClose: () => void
   settings: AppSettings
   onSaveRootPath: (path: string) => Promise<boolean>
-  showBgmRating: boolean
-  onToggleBgmRating: (v: boolean) => void
   games: Game[]
   favHashes: string[]
+  onNsfwBlurChange?: () => void
 }) {
   const { push } = useToast()
   const [cacheInfo, setCacheInfo] = useState<{ count: number } | null>(null)
@@ -2419,11 +2461,7 @@ function SettingsModal({
         title: displayTitle(g),
         developer: devName(g) || '',
         released: g.metadata?.released || '',
-        rating: g.metadata?.bgmRating
-          ? (g.metadata.bgmRating / 10).toFixed(1)
-          : g.metadata?.rating
-            ? (g.metadata.rating / 10).toFixed(1)
-            : '',
+        rating: g.metadata?.rating ? (g.metadata.rating / 10).toFixed(1) : '',
         completed: g.completed === true,
         favorite: favHashes.includes(g.pathHash),
         downloaded: !g.notDownloaded,
@@ -2529,6 +2567,7 @@ function SettingsModal({
                   localStorage.setItem('gl-nsfw-blur', nsfwBlur ? '1' : '0')
                 } catch (e) {}
                 setNsfwTick(t => t + 1)
+                onNsfwBlurChange?.()
               }}
               className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-xs transition ${
                 nsfwBlur
@@ -2561,29 +2600,6 @@ function SettingsModal({
               ))}
             </div>
             <p className="mt-2 text-[11px] leading-relaxed text-white/35">高 DPI 屏建议调到 125% 以上。</p>
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-sm text-white/70">显示选项</div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm text-white/85">卡片显示 Bangumi 评分</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-white/35">
-                  在卡片右上角显示 Bangumi 评分（仅在有 Bangumi 条目时显示）
-                </p>
-              </div>
-              <button
-                onClick={() => onToggleBgmRating(!showBgmRating)}
-                role="switch"
-                aria-checked={showBgmRating}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition ${showBgmRating ? 'bg-indigo-500' : 'bg-white/15'}`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
-                    showBgmRating ? 'left-[22px]' : 'left-0.5'
-                  }`}
-                />
-              </button>
-            </div>
           </div>
           <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
             <div className="mb-2 text-sm text-white/70">代理服务器（可选）</div>
@@ -2855,7 +2871,7 @@ function useLibrary() {
   }, [])
 
   const scrapeGame = useCallback(
-    async (game: Game, force: boolean): Promise<boolean> => {
+    async (game: Game, force: boolean, notify = true): Promise<string | null> => {
       patchGame(game.pathHash, { status: 'scraping' })
       const params = new URLSearchParams({
         name: game.folderName,
@@ -2868,18 +2884,22 @@ function useLibrary() {
         const resp = await fetch(`/api/scrape?${params.toString()}`)
         const json = await resp.json().catch(() => null)
         if (!json) throw Error('响应解析失败')
-        if (json.ok) {
+        if (json.proxyFallback && notify) toastProxyFallback(push)
+        if (json.ok && json.success !== false && json.data) {
           patchGame(game.pathHash, { metadata: json.data, status: 'done', error: undefined })
-          return !!json.success
+          return null
         }
-        patchGame(game.pathHash, { status: 'error', error: json.error ?? '获取失败' })
-        return false
+        const msg = json.error ?? (json.success === false ? '所有数据源均未返回结果' : '获取失败')
+        // 只更新状态和错误提示，不清空已有 metadata，避免断网时把旧信息抹掉
+        patchGame(game.pathHash, { status: 'error', error: msg })
+        return msg
       } catch (e) {
-        patchGame(game.pathHash, { status: 'error', error: '网络请求失败' })
-        return false
+        const msg = '网络请求失败：' + (e instanceof Error ? e.message : String(e))
+        patchGame(game.pathHash, { status: 'error', error: msg })
+        return msg
       }
     },
-    [patchGame],
+    [patchGame, push],
   )
 
   const enqueueScrape = useCallback(
@@ -2894,8 +2914,8 @@ function useLibrary() {
       const worker = async () => {
         while (queueRef.current.length > 0) {
           const game = queueRef.current.shift()!
-          const ok = await scrapeGame(game, false)
-          if (ok) success++
+          const err = await scrapeGame(game, false, false)
+          if (err == null) success++
           else failed++
           setProgress(prev => ({ ...prev, done: prev.done + 1 }))
         }
@@ -2925,6 +2945,7 @@ function useLibrary() {
           matchedTypes: g.matchedTypes,
           rootPath: g.rootPath,
           completed: g.completed,
+          completedAt: g.completedAt,
         })),
       }),
     }).catch(() => {})
@@ -2943,7 +2964,15 @@ function useLibrary() {
 
   const setGameCompleted = useCallback(
     (hash: string, completed: boolean) => {
-      updateGames(prev => prev.map(g => (g.pathHash === hash ? { ...g, completed } : g)))
+      updateGames(prev =>
+        prev.map(g =>
+          g.pathHash === hash
+            ? completed
+              ? { ...g, completed: true, completedAt: new Date().toISOString() }
+              : { ...g, completed: false, completedAt: undefined }
+            : g,
+        ),
+      )
     },
     [updateGames],
   )
@@ -2998,12 +3027,26 @@ function useLibrary() {
         }
         updateGames(prev => {
           const merged = (() => {
+            const removed = new Set(Array.isArray(json.removedPaths) ? json.removedPaths : [])
             const map = new Map(prev.map(g => [g.pathHash, g]))
+            const scannedHashes = new Set(scanned.map((g: LibraryGame) => g.pathHash))
+            // 目录已不存在（被移动/删除）的库条目，扫描后自动移除
+            for (const [hash] of map) {
+              if (!scannedHashes.has(hash) && removed.has(hash)) map.delete(hash)
+            }
             for (const g of scanned) {
               const existing = map.get(g.pathHash)
               if (existing) {
                 map.set(g.pathHash, {
                   ...existing,
+                  // 目录内容可能已变化，刷新扫描到的这些字段
+                  folderName: g.folderName,
+                  folderPath: g.folderPath,
+                  fileCount: g.fileCount,
+                  exeCandidates: g.exeCandidates,
+                  matchScore: g.matchScore,
+                  matchedTypes: g.matchedTypes,
+                  rootPath: g.rootPath,
                   metadata: existing.metadata ?? g.metadata,
                   status: existing.metadata || g.metadata ? 'done' : existing.status,
                   selectedExe: g.selectedExe ?? existing.selectedExe,
@@ -3014,30 +3057,12 @@ function useLibrary() {
                   lastPlayed: g.lastPlayed ?? existing.lastPlayed,
                   playSessions: g.playSessions ?? existing.playSessions,
                 })
-              } else if (!(json.removedPaths || []).includes(g.pathHash)) {
+              } else {
                 map.set(g.pathHash, g)
               }
             }
             return [...map.values()]
           })()
-          setTimeout(() => {
-            fetch('/api/library', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                games: merged.map((t: Game) => ({
-                  folderName: t.folderName,
-                  folderPath: t.folderPath,
-                  pathHash: t.pathHash,
-                  fileCount: t.fileCount,
-                  exeCandidates: t.exeCandidates,
-                  matchScore: t.matchScore,
-                  matchedTypes: t.matchedTypes,
-                  rootPath: t.rootPath,
-                })),
-              }),
-            }).catch(() => {})
-          }, 0)
           return merged
         })
         void refreshPlaytime()
@@ -3095,23 +3120,6 @@ function useLibrary() {
           setGames(loaded)
           const missing = loaded.filter((g: Game) => !g.metadata)
           if (missing.length > 0) void enqueueScrape(missing)
-          const noRating = loaded.filter((g: Game) => g.metadata && g.metadata.bgmRating == null)
-          if (noRating.length > 0) {
-            const queue = [...noRating]
-            const worker = async () => {
-              while (queue.length) {
-                const g = queue.shift()!
-                try {
-                  const resp = await fetch(
-                    `/api/scrape?name=${encodeURIComponent(g.folderName)}&folder=${encodeURIComponent(g.folderName)}&hash=${encodeURIComponent(g.pathHash)}&enrich=1`,
-                  )
-                  const json = await resp.json()
-                  if (json.ok && json.data) patchGame(g.pathHash, { metadata: json.data })
-                } catch (e) {}
-              }
-            }
-            void Promise.all(Array.from({ length: 2 }, worker))
-          }
         } else if (settingsJson.ok && settingsJson.settings?.rootPath) {
           await doScan(
             settingsJson.settings.rootPath,
@@ -3356,17 +3364,24 @@ function useLibrary() {
   const relocate = useCallback(
     async (game: Game, newPath: string) => {
       try {
+        const oldHash = game.pathHash
         const resp = await fetch('/api/scan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rootPath: game.rootPath || '', mode: 'strict', path: newPath }),
+          body: JSON.stringify({
+            rootPath: game.rootPath || '',
+            mode: 'strict',
+            path: newPath,
+            oldHash,
+            oldFolderName: game.folderName,
+          }),
         })
         const json = await resp.json()
         if (!json.ok || !json.game) return { ok: false, error: json.error || '该路径未识别为游戏' }
         const recognized = json.game
         updateGames(prev =>
           prev.map(g =>
-            g.pathHash === game.pathHash
+            g.pathHash === oldHash
               ? {
                   ...g,
                   folderName: recognized.folderName,
@@ -3376,14 +3391,31 @@ function useLibrary() {
                   exeCandidates: recognized.exeCandidates,
                   matchScore: recognized.matchScore,
                   matchedTypes: recognized.matchedTypes,
+                  selectedExe: (() => {
+                    const oldBase = g.selectedExe?.split(/[\\/]/).pop()
+                    const match = recognized.exeCandidates.find(
+                      (e: { name?: string; path?: string }) => e.name === oldBase
+                    )
+                    return match?.path ?? recognized.exeCandidates[0]?.path
+                  })(),
                   status: 'pending',
                 }
               : g,
           ),
         )
+        // 保持详情弹窗打开（pathHash 已变化，旧 selectedHash 会失配）
+        setSelectedHash(recognized.pathHash)
+        // 服务端已迁移 exe/cover/title/dev 映射与 playtime；同步 settings 状态
+        fetch('/api/settings')
+          .then(r => r.json())
+          .then(s => {
+            if (s.ok && s.settings) setSettings(s.settings)
+          })
+          .catch(() => {})
+        void refreshPlaytime()
         setTimeout(() => {
           fetch(
-            `/api/scrape?name=${encodeURIComponent(recognized.folderName)}&folder=${encodeURIComponent(recognized.folderPath)}&hash=${recognized.pathHash}&enrich=1`,
+            `/api/scrape?name=${encodeURIComponent(recognized.folderName)}&folder=${encodeURIComponent(recognized.folderName)}&hash=${recognized.pathHash}&enrich=1`,
           )
             .then(r => r.json())
             .then(json => {
@@ -3397,27 +3429,17 @@ function useLibrary() {
         return { ok: false, error: '网络错误：' + String(err) }
       }
     },
-    [updateGames, patchGame],
-  )
-
-  const setShowBgmRating = useCallback(
-    (v: boolean) => {
-      if (settings) {
-        setSettings({ ...settings, showBgmRating: v })
-        fetch('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ showBgmRating: v }),
-        }).catch(() => {})
-      }
-    },
-    [settings],
+    [updateGames, patchGame, refreshPlaytime],
   )
 
   const rescrape = useCallback(
     async (game: Game, silent?: boolean) => {
-      const ok = await scrapeGame(game, true)
-      if (!silent) push(ok ? `「${game.folderName}」元数据已更新` : `「${game.folderName}」获取失败`, ok ? 'success' : 'error')
+      const err = await scrapeGame(game, true, !silent)
+      if (!silent)
+        push(
+          err == null ? `「${game.folderName}」元数据已更新` : `「${game.folderName}」获取失败：${err}`,
+          err == null ? 'success' : 'error',
+        )
     },
     [scrapeGame, push],
   )
@@ -3438,24 +3460,6 @@ function useLibrary() {
             body: JSON.stringify({ ignorePaths: ignore }),
           }).catch(() => {})
         }
-        setTimeout(() => {
-          fetch('/api/library', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              games: next.map(g => ({
-                folderName: g.folderName,
-                folderPath: g.folderPath,
-                pathHash: g.pathHash,
-                fileCount: g.fileCount,
-                exeCandidates: g.exeCandidates,
-                matchScore: g.matchScore,
-                matchedTypes: g.matchedTypes,
-                rootPath: g.rootPath,
-              })),
-            }),
-          }).catch(() => {})
-        }, 0)
         return next
       })
       setSelectedHash(prev => (prev === hash ? null : prev))
@@ -3475,6 +3479,7 @@ function useLibrary() {
       try {
         const resp = await fetch(`/api/scrape?${params.toString()}`)
         const json = await resp.json()
+        if (json.proxyFallback) toastProxyFallback(push)
         if (json.ok && json.data) {
           patchGame(game.pathHash, { metadata: json.data, status: 'done', error: undefined })
           push(`已应用「${json.data.title}」的元数据`, 'success')
@@ -3518,9 +3523,42 @@ function useLibrary() {
     setCustomTitle,
     setCustomDeveloper,
     setGameCompleted,
-    setShowBgmRating,
     relocate,
   }
+}
+
+// 左侧栏稳定子组件（定义在组件外，避免每次 Page 渲染都重新挂载导致滚动位置跳动）
+function DevDot({ name }: { name: string }) {
+  return (
+    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorFor(name)[0] }} />
+  )
+}
+
+function SidebarItem({
+  id,
+  name,
+  countLabel,
+  active,
+  onClick,
+}: {
+  id: string
+  name: string
+  countLabel: string | number
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition ${
+        active ? 'bg-indigo-500/15 font-medium text-indigo-200' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
+      }`}
+    >
+      <DevDot name={name} />
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      <span className="text-[11px] tabular-nums text-white/30">{countLabel}</span>
+    </button>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -3529,8 +3567,36 @@ function useLibrary() {
 
 export default function Page() {
   const lib = useLibrary()
+  const { push } = useToast()
+  // 单游戏 NSFW 模糊开关：nsfwOff 集合中的游戏即使 NSFW 也不模糊（localStorage 持久化）
+  const [nsfwOff, setNsfwOff] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('gl-nsfw-blur-off') || '[]'))
+    } catch (e) {
+      return new Set()
+    }
+  })
+  const toggleNsfwBlur = useCallback(
+    (game: Game) => {
+      const key = game.pathHash
+      const wasOff = nsfwOff.has(key)
+      const next = new Set(nsfwOff)
+      if (wasOff) next.delete(key)
+      else next.add(key)
+      setNsfwOff(next)
+      try {
+        localStorage.setItem('gl-nsfw-blur-off', JSON.stringify([...next]))
+      } catch (e) {}
+      push(
+        wasOff ? '已恢复「' + displayTitle(game) + '」的封面模糊' : '已对「' + displayTitle(game) + '」关闭封面模糊',
+        wasOff ? 'info' : 'success',
+      )
+    },
+    [nsfwOff, push],
+  )
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [filter, setFilter] = useState<{ kind: string; name?: string; year?: string }>({ kind: 'all' })
+  const [, setNsfwTick] = useState(0)
+  const [filter, setFilter] = useState<{ kind: 'all' | 'dev'; name?: string }>({ kind: 'all' })
   const [sortMode, setSortMode] = useState('title')
   const [devSortDesc, setDevSortDesc] = useState(false)
   const [companyData, setCompanyData] = useState<Record<string, CompanyInfo | null>>({})
@@ -3560,17 +3626,6 @@ export default function Page() {
     return [...map.entries()].sort((a, b) => (devSortDesc ? -1 : 1) * a[0].localeCompare(b[0], 'zh-Hans-CN'))
   }, [lib.games, devSortDesc])
 
-  const years = useMemo(() => {
-    const map = new Map<string, number>()
-    for (const g of lib.games) {
-      const year = releaseYear(g) ?? '年份未知'
-      map.set(year, (map.get(year) ?? 0) + 1)
-    }
-    return [...map.entries()].sort((a, b) =>
-      a[0] === '年份未知' ? 1 : b[0] === '年份未知' ? -1 : Number(b[0]) - Number(a[0]),
-    )
-  }, [lib.games])
-
   const recent = useMemo(
     () =>
       lib.games
@@ -3582,6 +3637,14 @@ export default function Page() {
 
   const totalMinutes = useMemo(() => lib.games.reduce((acc, g) => acc + (g.playtimeMinutes || 0), 0), [lib.games])
 
+  const completedGames = useMemo(
+    () =>
+      lib.games
+        .filter(g => g.completed === true)
+        .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? '')),
+    [lib.games],
+  )
+
   const query = lib.search.trim().toLowerCase()
 
   const sortedGames = useMemo(() => {
@@ -3591,8 +3654,9 @@ export default function Page() {
           displayTitle(a).localeCompare(displayTitle(b), 'zh-Hans-CN')
         : displayTitle(a).localeCompare(displayTitle(b), 'zh-Hans-CN'),
     )
+    // 收藏游戏始终置顶；「仅显示收藏」时非收藏游戏会被过滤隐藏
     return list.filter(g => favs.includes(g.pathHash)).concat(list.filter(g => !favs.includes(g.pathHash)))
-  }, [lib.games, sortMode, favs])
+  }, [lib.games, sortMode, favs, showFavOnly])
 
   const visibleCount = useMemo(
     () =>
@@ -3600,39 +3664,6 @@ export default function Page() {
         g => matchesFilter(g, query, filter) && (!showFavOnly || favs.includes(g.pathHash)),
       ).length,
     [lib.games, query, filter, showFavOnly, favs],
-  )
-
-  const DevDot = ({ name }: { name: string }) => (
-    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorFor(name)[0] }} />
-  )
-
-  const SidebarItem = ({
-    id,
-    name,
-    countLabel,
-    active,
-    onClick,
-  }: {
-    id: string
-    name: string
-    countLabel: string | number
-    active: boolean
-    onClick: () => void
-  }) => (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition ${
-        active ? 'bg-indigo-500/15 font-medium text-indigo-200' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
-      }`}
-    >
-      <DevDot name={name} />
-      <span className="min-w-0 flex-1 truncate">{name}</span>
-      <span className="text-[11px] tabular-nums text-white/30">{countLabel}</span>
-    </button>
-  )
-
-  const SectionLabel = ({ children }: { children: ReactNode }) => (
-    <p className="px-2.5 pb-1 pt-1.5 text-[10px] font-medium uppercase tracking-wider text-white/25">{children}</p>
   )
 
   const normKey = (s?: string) =>
@@ -3646,7 +3677,7 @@ export default function Page() {
     return title.includes(q) || original.includes(q) || w.folderName.toLowerCase().includes(q) || devs.includes(q)
   }
 
-  const fetchCompany = async (name: string, force?: boolean) => {
+  const fetchCompany = async (name: string, force?: boolean, notify = true) => {
     if (companyBusy[name]) return
     setCompanyBusy(prev => ({ ...prev, [name]: true }))
     try {
@@ -3673,6 +3704,7 @@ export default function Page() {
         )
         json = await resp.json().catch(() => null)
       }
+      if (json && json.proxyFallback && notify) toastProxyFallback(push)
       if (!json || !json.ok || !Array.isArray(json.games)) {
         setCompanyData(prev => ({ ...prev, [name]: null }))
         return
@@ -3841,7 +3873,7 @@ export default function Page() {
         const name = names[i++]
         if (!companyData[name] && !companyBusy[name]) {
           try {
-            await fetchCompany(name)
+            await fetchCompany(name, false, false)
           } catch (e) {}
         }
       }
@@ -3894,13 +3926,13 @@ export default function Page() {
         scraping={lib.scraping}
         rootName={lib.rootName}
       />
-      <main className="mx-auto max-w-[1600px] px-4 pb-28 pt-6 sm:px-6">
+      <main className="mx-auto max-w-[1600px] px-4 pb-28 pt-6 sm:px-6 lg:h-[calc(100vh-67px)] lg:overflow-hidden lg:pb-0">
         {lib.games.length === 0 ? (
           <EmptyState onOpenSettings={() => setSettingsOpen(true)} scanning={lib.scanning} />
         ) : (
-          <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] xl:grid-cols-[210px_minmax(0,1fr)_220px] lg:gap-6">
-            <aside className="hidden lg:block">
-              <div className="sticky top-[76px] max-h-[calc(100vh-96px)] overflow-y-auto rounded-2xl border border-white/[0.06] bg-white/[0.02] p-2">
+          <div className="lg:grid lg:h-full lg:grid-cols-[210px_minmax(0,1fr)] xl:grid-cols-[210px_minmax(0,1fr)_220px] lg:gap-6">
+            <aside className="hidden lg:block max-h-[calc(100vh-91px)] overflow-y-auto overscroll-contain">
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-2">
                 <SidebarItem
                   id="all"
                   name="全部游戏"
@@ -3930,40 +3962,30 @@ export default function Page() {
                     </button>
                   </span>
                 </div>
-                {companies.map(([name, count]) => {
-                  const label =
-                    companyData[name] && typeof companyData[name]!.total === 'number'
-                      ? `${count}/${companyData[name]!.total}`
-                      : String(count)
-                  return (
-                    <SidebarItem
-                      key={`dev-${name}`}
-                      id={`dev-${name}`}
-                      name={name}
-                      countLabel={label}
-                      active={filter.kind === 'dev' && filter.name === name}
-                      onClick={() => {
-                        setFilter({ kind: 'dev', name })
-                        if (!companyData[name]) void fetchCompany(name)
-                      }}
-                    />
-                  )
-                })}
-                <div className="my-1.5 h-px bg-white/[0.06]" />
-                <SectionLabel>年份</SectionLabel>
-                {years.map(([year, count]) => (
-                  <SidebarItem
-                    key={`year-${year}`}
-                    id={`year-${year}`}
-                    name={yearLabel(year)}
-                    countLabel={count}
-                    active={filter.kind === 'year' && filter.year === year}
-                    onClick={() => setFilter({ kind: 'year', year })}
-                  />
-                ))}
+                <div className="max-h-[calc(100vh-240px)] space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
+                  {companies.map(([name, count]) => {
+                    const label =
+                      companyData[name] && typeof companyData[name]!.total === 'number'
+                        ? `${count}/${companyData[name]!.total}`
+                        : String(count)
+                    return (
+                      <SidebarItem
+                        key={`dev-${name}`}
+                        id={`dev-${name}`}
+                        name={name}
+                        countLabel={label}
+                        active={filter.kind === 'dev' && filter.name === name}
+                        onClick={() => {
+                          setFilter({ kind: 'dev', name })
+                          if (!companyData[name]) void fetchCompany(name)
+                        }}
+                      />
+                    )
+                  })}
+                </div>
               </div>
             </aside>
-            <section>
+            <section className="lg:h-full lg:overflow-y-auto lg:overscroll-contain lg:pb-10">
               <div className="mb-4 space-y-1.5 lg:hidden">
                 <div className="flex gap-2 overflow-x-auto pb-0.5">
                   <FilterChip active={filter.kind === 'all'} onClick={() => setFilter({ kind: 'all' })}>
@@ -3988,21 +4010,10 @@ export default function Page() {
                     )
                   })}
                 </div>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {years.map(([year, count]) => (
-                    <FilterChip
-                      key={year}
-                      active={filter.kind === 'year' && filter.year === year}
-                      onClick={() => setFilter({ kind: 'year', year })}
-                    >
-                      {yearLabel(year)} {count}
-                    </FilterChip>
-                  ))}
-                </div>
               </div>
               <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-white/35">
                 <span className="font-medium text-white/55">
-                  {filter.kind === 'all' ? '' : filter.kind === 'dev' ? `厂商：${filter.name}` : `年份：${yearLabel(filter.year!)}`}
+                  {filter.kind === 'all' ? '' : filter.kind === 'dev' ? `厂商：${filter.name}` : ''}
                 </span>
                 {lib.scraping && <span>· 获取信息中…</span>}
                 <span className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -4086,6 +4097,8 @@ export default function Page() {
                         onRemove={() => lib.removeGame(g.pathHash)}
                         isFav={favs.includes(g.pathHash)}
                         onToggleFav={() => toggleFav(g.pathHash)}
+                        nsfwOff={nsfwOff.has(g.pathHash)}
+                        onToggleNsfw={() => toggleNsfwBlur(g)}
                       />
                     </div>
                   ))}
@@ -4115,6 +4128,8 @@ export default function Page() {
                             onRemove={() => hideWebGame(w.pathHash)}
                             isFav={favs.includes(w.pathHash)}
                             onToggleFav={() => toggleFav(w.pathHash)}
+                            nsfwOff={nsfwOff.has(w.pathHash)}
+                            onToggleNsfw={() => toggleNsfwBlur(w)}
                           />
                         </div>
                       ))}
@@ -4142,8 +4157,8 @@ export default function Page() {
                 </div>
               )}
             </section>
-            <aside className="hidden xl:block">
-              <div className="sticky top-[76px] max-h-[calc(100vh-96px)] space-y-3 overflow-y-auto">
+            <aside className="hidden xl:block max-h-[calc(100vh-91px)] overflow-y-auto overscroll-contain">
+              <div className="space-y-3">
                 <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
                   <p className="text-[11px] text-indigo-200/60">总计游玩时长</p>
                   <p className="mt-1 text-2xl font-bold leading-none text-indigo-200">{formatDurationCompact(totalMinutes)}</p>
@@ -4151,21 +4166,62 @@ export default function Page() {
                 <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3">
                   <p className="mb-2 text-[11px] text-white/40">最近启动</p>
                   {recent.length ? (
-                    recent.map(g => (
-                      <button
+                    <div className="max-h-[220px] space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
+                    {recent.map(g => (
+                      <div
                         key={g.pathHash}
-                        onClick={() => void lib.launch(g)}
-                        className="group flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-white/[0.06]"
-                        title={displayTitle(g)}
+                        className="group flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-white/[0.06]"
                       >
-                        <span className="min-w-0 flex-1 truncate text-xs text-white/75 group-hover:text-white">
+                        <button
+                          onClick={() => lib.setSelectedHash(g.pathHash)}
+                          className="min-w-0 flex-1 truncate text-left text-xs text-white/75 transition group-hover:text-white"
+                          title={displayTitle(g)}
+                        >
                           {displayTitle(g)}
-                        </span>
+                        </button>
                         <span className="shrink-0 text-[10px] text-white/30">{relativeTime(g.lastPlayed)}</span>
-                      </button>
-                    ))
+                        <button
+                          onClick={() => void lib.launch(g)}
+                          title={"启动 " + displayTitle(g)}
+                          aria-label={"启动 " + displayTitle(g)}
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/[0.05] text-white/55 transition hover:bg-emerald-500/90 hover:text-white"
+                        >
+                          <Icon name="play" className="h-3 w-3 fill-current" />
+                        </button>
+                      </div>
+                    ))}
+                    </div>
                   ) : (
                     <p className="py-2 text-center text-xs text-white/25">暂无启动记录</p>
+                  )}
+                </div>
+                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
+                  <p className="mb-2 text-[11px] text-amber-200/60">已通关 {completedGames.length}</p>
+                  {completedGames.length ? (
+                    <div className="max-h-[280px] space-y-0.5 overflow-y-auto overscroll-contain pr-0.5">
+                      {completedGames.map((g, i) => (
+                        <button
+                          key={g.pathHash}
+                          onClick={() => lib.setSelectedHash(g.pathHash)}
+                          className="group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-white/[0.06]"
+                          title={displayTitle(g)}
+                        >
+                          <span className="relative h-8 w-6 shrink-0 overflow-hidden rounded bg-ink-800">
+                            {g.customCover ?? g.metadata?.coverUrl ? (
+                              <CoverImage url={g.customCover ?? g.metadata!.coverUrl!} alt="" />
+                            ) : (
+                              <CoverPlaceholder name={displayTitle(g)} />
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-xs text-white/75 group-hover:text-white">
+                            {displayTitle(g)}
+                          </span>
+                          <span className="shrink-0 text-[10px] tabular-nums text-amber-200/40">#{i + 1}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="py-2 text-center text-xs text-white/25">暂无已通关游戏</p>
                   )}
                 </div>
               </div>
@@ -4176,6 +4232,11 @@ export default function Page() {
       {lib.scraping && <ProgressToast done={lib.progress.done} total={lib.progress.total} />}
       <GameDetailModal
         game={lib.selectedGame || webSel}
+        nsfwOff={nsfwOff.has((lib.selectedGame || webSel)?.pathHash ?? '')}
+        onToggleNsfw={() => {
+          const g = lib.selectedGame || webSel
+          if (g) toggleNsfwBlur(g)
+        }}
         onClose={() => {
           lib.setSelectedHash(null)
           setWebSel(null)
@@ -4200,10 +4261,9 @@ export default function Page() {
         onClose={() => setSettingsOpen(false)}
         settings={lib.settings}
         onSaveRootPath={lib.saveRootPath}
-        showBgmRating={lib.settings?.showBgmRating !== false}
-        onToggleBgmRating={lib.setShowBgmRating}
         games={lib.games}
         favHashes={favs}
+        onNsfwBlurChange={() => setNsfwTick(t => t + 1)}
       />
     </div>
   )

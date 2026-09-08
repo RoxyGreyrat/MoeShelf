@@ -1,12 +1,13 @@
-// 全源搜索聚合（编译产物模块 7157）。
+// 全源搜索聚合（编译产物模块 7157，含 Moyu 扩展）。
 // 导出对应：vU=searchAllSources、Ps=searchCandidates、h_=fetchBySourceId。
 import { getVndbById, searchVndb } from './vndb'
 import { getBangumiById, searchBangumiList } from './bangumi'
 import { getYmgalById, searchYmgal } from './ymgal'
 import { getCngalById, searchCngal } from './cngal'
+import { getMoyuById, searchMoyu } from './moyu'
 import type { GameData, SearchCandidate, SourceSearchResult } from './source-types'
 
-export const SOURCE_NAMES = ['vndb', 'bangumi', 'ymgal', 'cngal'] as const
+export const SOURCE_NAMES = ['vndb', 'bangumi', 'ymgal', 'cngal', 'moyu'] as const
 export type SourceName = (typeof SOURCE_NAMES)[number]
 
 /** 模块 7157 的 o：各源全源搜索超时 */
@@ -15,9 +16,10 @@ const SOURCE_TIMEOUTS: Record<SourceName, number> = {
   bangumi: 10000,
   ymgal: 8000,
   cngal: 8000,
+  moyu: 10000,
 }
 
-/** 模块 7157 vU：四源并行搜索，逐源超时/异常隔离 */
+/** 模块 7157 vU：五源并行搜索，逐源超时/异常隔离 */
 export async function searchAllSources(query: string): Promise<SourceSearchResult[]> {
   return await Promise.all(
     SOURCE_NAMES.map(async (source) => {
@@ -88,6 +90,27 @@ export async function searchCandidates(
         title: e.entry.name,
         coverUrl: e.entry.mainImage ?? undefined,
       }))
+    case 'moyu':
+      return (await searchMoyu(query)).map((e) => {
+        const n = e.name ?? {}
+        const zh = n['zh-cn'] || n['zh-tw'] || ''
+        const ja = n['ja-jp'] || ''
+        const en = n['en-us'] || ''
+        const title = zh || ja || en || ''
+        const original = ja || en
+        const makerName = e.galgame?.maker?.name
+        const developer = makerName
+          ? makerName['zh-cn'] || makerName['zh-tw'] || makerName['ja-jp'] || makerName['en-us'] || ''
+          : ''
+        return {
+          source: 'moyu',
+          id: String(e.id),
+          title,
+          originalTitle: original && original !== title ? original : undefined,
+          released: (e.release_date || e.galgame?.release_date || '').slice(0, 10) || undefined,
+          developers: developer ? [developer] : undefined,
+        }
+      })
   }
 }
 
@@ -102,5 +125,7 @@ export async function fetchBySourceId(source: SourceName, id: string): Promise<G
       return getYmgalById(id)
     case 'cngal':
       return getCngalById(id)
+    case 'moyu':
+      return getMoyuById(id)
   }
 }

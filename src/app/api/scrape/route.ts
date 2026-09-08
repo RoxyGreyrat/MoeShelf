@@ -2,6 +2,7 @@
 // 支持 company（会社未下载列表）、enrich（补 Bangumi 评分）、source+id（按源按 id 拉取）、
 // 常规顺序刮削与缓存复用。响应字段与前端依赖逐字段一致。
 import { NextRequest, NextResponse } from 'next/server'
+import { proxyFallbackUsedInRequest, withProxyFallbackContext } from '@/lib/fetch'
 import { cacheKeyOf, loadCacheGames, saveCacheEntry } from '@/lib/core'
 import { searchBangumi } from '@/lib/bangumi'
 import { SOURCE_NAMES, fetchBySourceId } from '@/lib/search'
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(req: NextRequest) {
+  return withProxyFallbackContext(async () => {
+    const json = (body: Record<string, unknown>, init?: ResponseInit) =>
+      NextResponse.json({ ...body, proxyFallback: proxyFallbackUsedInRequest() }, init)
   const name = req.nextUrl.searchParams.get('name')?.trim() ?? ''
   const folder = req.nextUrl.searchParams.get('folder')?.trim()
   const hash = req.nextUrl.searchParams.get('hash')?.trim()
@@ -36,7 +40,7 @@ export async function GET(req: NextRequest) {
     // 会社缓存为“永久缓存”：命中即返回，不做过期判断；空结果不写缓存 → 下次自动重拉
     if (hit && hit.success && hit.data && !force) {
       const data = hit.data as { games?: unknown[] }
-      return NextResponse.json({
+      return json({
         ok: true,
         cached: true,
         company,
@@ -47,7 +51,7 @@ export async function GET(req: NextRequest) {
     try {
       const data = await fetchCompanyGames(company, vndbIds, ckey)
       if (!data || !data.games || !data.games.length) {
-        return NextResponse.json({ ok: true, company, count: 0, games: [] })
+        return json({ ok: true, company, count: 0, games: [] })
       }
       const entry: CacheEntry = {
         key: ckey,
@@ -65,7 +69,7 @@ export async function GET(req: NextRequest) {
       } catch (e) {
         console.error('[scrape] company cache write failed:', e)
       }
-      return NextResponse.json({
+      return json({
         ok: true,
         cached: false,
         company,
@@ -73,7 +77,7 @@ export async function GET(req: NextRequest) {
         games: data.games,
       })
     } catch (err) {
-      return NextResponse.json(
+      return json(
         {
           ok: false,
           error: '获取会社游戏列表失败：' + (err instanceof Error ? err.message : String(err)),
@@ -84,7 +88,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!name) {
-    return NextResponse.json({ ok: false, error: '缺少 name 参数' }, { status: 400 })
+    return json({ ok: false, error: '缺少 name 参数' }, { status: 400 })
   }
 
   const cacheKey = folder && hash ? cacheKeyOf(folder, hash) : `name::${name}`
@@ -94,7 +98,7 @@ export async function GET(req: NextRequest) {
     const entry = (await loadCacheGames())[cacheKey]
     if (entry && entry.success && entry.data) {
       if (entry.data.bgmRating != null) {
-        return NextResponse.json({
+        return json({
           ok: true,
           cached: true,
           success: true,
@@ -111,7 +115,7 @@ export async function GET(req: NextRequest) {
           entry.scrapedAt = new Date().toISOString()
           entry.folderPath = entry.folderPath || folderPath || undefined
           await saveCacheEntry(entry)
-          return NextResponse.json({
+          return json({
             ok: true,
             cached: false,
             enriched: true,
@@ -128,7 +132,7 @@ export async function GET(req: NextRequest) {
       } catch {
         // enrich 失败走缓存兜底
       }
-      return NextResponse.json({
+      return json({
         ok: true,
         cached: true,
         success: true,
@@ -141,19 +145,19 @@ export async function GET(req: NextRequest) {
   // ===== 按数据源 + id 拉取 =====
   if (source && id) {
     if (!(SOURCE_NAMES as readonly string[]).includes(source)) {
-      return NextResponse.json({ ok: false, error: '无效的数据源' }, { status: 400 })
+      return json({ ok: false, error: '无效的数据源' }, { status: 400 })
     }
     let fetched
     try {
       fetched = await fetchBySourceId(source as (typeof SOURCE_NAMES)[number], id)
     } catch (e) {
-      return NextResponse.json(
+      return json(
         { ok: false, error: '拉取失败：' + (e instanceof Error ? e.message : String(e)) },
         { status: 500 }
       )
     }
     if (!fetched) {
-      return NextResponse.json(
+      return json(
         { ok: false, error: '该数据源中未找到对应条目（id=' + id + '）' },
         { status: 404 }
       )
@@ -177,14 +181,14 @@ export async function GET(req: NextRequest) {
     } catch (e) {
       console.error('[scrape] 缓存写入失败:', e)
     }
-    return NextResponse.json({ ok: true, cached: false, success: true, source, data })
+    return json({ ok: true, cached: false, success: true, source, data })
   }
 
   // ===== 缓存复用（非 force 时） =====
   if (!force) {
     const entry = (await loadCacheGames())[cacheKey]
     if (entry && isScrapeCacheFresh(entry)) {
-      return NextResponse.json({
+      return json({
         ok: true,
         cached: true,
         success: entry.success,
@@ -201,7 +205,7 @@ export async function GET(req: NextRequest) {
     result = await scrapeSequentially(name)
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
-    return NextResponse.json({ ok: false, error: `刮削服务异常：${message}` }, { status: 500 })
+    return json({ ok: false, error: `刮削服务异常：${message}` }, { status: 500 })
   }
   const entry: CacheEntry = {
     key: cacheKey,
@@ -217,5 +221,6 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error('[scrape] 缓存写入失败:', e)
   }
-  return NextResponse.json({ ok: true, cached: false, ...result })
+  return json({ ok: true, cached: false, ...result })
+  })
 }

@@ -1,6 +1,6 @@
 {
   "name": "galgame-library",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "description": "Galgame 本地图书馆 —— 像 Infuse 管理本地视频一样管理本地 Galgame 收藏，自动从网络刮削封面与元数据",
   "scripts": {

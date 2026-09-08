@@ -16,14 +16,14 @@ const ROLE_LABELS: Record<string, string> = {
 const VNDB_API = 'https://api.vndb.org/kana'
 
 const VN_FIELDS =
-  'id, title, alttitle, aliases, image.url, released, developers { name }, description, rating, votecount'
+  'id, title, alttitle, aliases, image { url, sexual, violence }, released, developers { name }, description, rating, votecount'
 
 interface VndbVnResult {
   id: string
   title?: string
   alttitle?: string
   aliases?: string[]
-  image?: { url?: string } | null
+  image?: { url?: string; sexual?: number; violence?: number } | null
   released?: string
   developers?: { name?: string }[] | null
   description?: string
@@ -90,6 +90,7 @@ function mapVndbResult(vn: VndbVnResult, fallbackTitle: string): GameData {
     description: vn.description,
     rating: vn.rating,
     votecount: vn.votecount,
+    sexual: vn.image?.sexual,
     aliases: vn.aliases?.length ? vn.aliases : undefined,
     vndbId: vn.id,
     vndbUrl: `https://vndb.org/${vn.id}`,

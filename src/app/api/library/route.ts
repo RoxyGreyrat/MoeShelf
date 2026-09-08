@@ -121,6 +121,7 @@ export async function POST(req: NextRequest) {
           matchedTypes: Array.isArray(g.matchedTypes) ? g.matchedTypes : undefined,
           rootPath: typeof g.rootPath === 'string' ? g.rootPath : undefined,
           completed: typeof g.completed === 'boolean' ? g.completed : undefined,
+          completedAt: typeof g.completedAt === 'string' ? g.completedAt : undefined,
           savedAt: new Date().toISOString(),
         }) as unknown as LibraryGame
     )

@@ -57,7 +57,7 @@ export async function GET() {
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
-            'User-Agent': 'Mozilla/5.0 GalgameLibrary/1.0.5',
+            'User-Agent': 'Mozilla/5.0 GalgameLibrary/1.6.0',
           },
           body: test.method === 'POST' ? test.body : undefined,
           // undici 的 dispatcher 不是标准 RequestInit 字段，运行时由 undici fetch 消费

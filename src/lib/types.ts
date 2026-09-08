@@ -8,7 +8,6 @@ export interface Settings {
   titleMap: Record<string, string>
   devMap: Record<string, string>
   proxy: string
-  showBgmRating: boolean
   ignorePaths: string[]
   [key: string]: unknown
 }
@@ -30,6 +29,8 @@ export interface LibraryGame {
   savedAt: string
   /** 1.5.0 新增：已通关标记，旧数据无此字段 */
   completed?: boolean
+  /** 1.5.1 新增：通关时间（点击「标记为已通关」的时刻），用于已通关列表按最新排序；旧数据无此字段 */
+  completedAt?: string
   [key: string]: unknown
 }
 
