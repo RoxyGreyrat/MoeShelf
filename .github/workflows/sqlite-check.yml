@@ -23,3 +23,6 @@ jobs:
 
       - name: Type check + production build
         run: npm run build
+
+      - name: Run SQLite verification (15 checks)
+        run: npm run verify:sqlite
