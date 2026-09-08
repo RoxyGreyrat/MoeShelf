@@ -25,4 +25,19 @@ jobs:
         run: npm run build
 
       - name: Run SQLite verification (15 checks)
-        run: npm run verify:sqlite
+        id: verify
+        shell: pwsh
+        run: |
+          npm run verify:sqlite 2>&1 | Tee-Object -FilePath sqlite-verify.log
+          exit $LASTEXITCODE
+
+      - name: Open issue with failure log (for agent feedback loop)
+        if: failure() && steps.verify.outcome == 'failure'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $log = Get-Content sqlite-verify.log -Raw
+          $sha = $env:GITHUB_SHA.Substring(0, 7)
+          $body = "SHA $sha`n`n```text`n$log`n```"
+          gh issue create --repo $env:GITHUB_REPOSITORY --title "SQLite verify failed ($sha)" --body $body

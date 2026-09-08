@@ -88,10 +88,24 @@ async function startServer(dataDir, port) {
   let log = ''
   child.stdout.on('data', (d) => (log += d))
   child.stderr.on('data', (d) => (log += d))
-  const ok = await waitPort(port, 30000)
-  if (!ok) {
+  const end = Date.now() + 30000
+  let up = false
+  while (Date.now() < end) {
+    if (child.exitCode !== null || child.signalCode !== null) {
+      child.kill()
+      throw new Error('server exited early (code=' + child.exitCode + ')\n' + log.slice(-2000))
+    }
+    try {
+      await httpJson(port, 'GET', '/api/settings')
+      up = true
+      break
+    } catch {
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  }
+  if (!up) {
     child.kill()
-    throw new Error('server start timeout\n' + log.slice(-1500))
+    throw new Error('server start timeout\n' + log.slice(-2000))
   }
   return child
 }
