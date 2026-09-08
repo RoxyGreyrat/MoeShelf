@@ -46,6 +46,9 @@ export function getDb(): Promise<Database.Database> {
     const db = new Database(path.join(dir, 'moeshelf.db'))
     db.pragma('journal_mode = WAL')
     db.pragma('busy_timeout = 5000')
+    // 先赋值，迁移期间内部各模块 getDb() 复用同一句柄，避免自等 opening
+    handle = db
+    handleDir = dir
     try {
       ensureSchema(db)
       await migrateIfLegacy(db, dir)
@@ -68,8 +71,6 @@ export function getDb(): Promise<Database.Database> {
       handleDir = null
       throw err
     }
-    handle = db
-    handleDir = dir
     return db
   })()
   return opening.finally(() => {

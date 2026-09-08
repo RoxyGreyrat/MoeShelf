@@ -41,7 +41,7 @@ export function rowToGame(r: GameRow): LibraryGame {
     exeCandidates: jsonArr<LibraryGame['exeCandidates']>(r.exe_candidates, []),
     matchScore: r.match_score == null ? undefined : r.match_score,
     matchedTypes: jsonArr<string[]>(r.matched_types, []),
-    rootPath: r.root_path ?? undefined,
+    rootPath: r.root_path ?? '',
     savedAt: r.saved_at,
     completed: r.completed === 1 ? true : undefined,
     completedAt: r.completed_at ?? undefined,
