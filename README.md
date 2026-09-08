@@ -1,5 +1,4 @@
 [![Made with DeepSeek V4 Flash](https://img.shields.io/badge/Made%20with-DeepSeek%20V4%20Flash-536DFE?style=flat-square&logo=deepseek&logoColor=white)](https://deepseek.com)
-[![Made with ChatGPT](https://img.shields.io/badge/Made%20with-ChatGPT-10A37F?style=flat-square&logo=openai&logoColor=white)](https://chatgpt.com)
 
 
 <div align="center">
