@@ -155,10 +155,10 @@ function appIcon() {
 
 function createWindow(url) {
   const win = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 940,
-    minHeight: 620,
+    width: 1560,
+    height: 940,
+    minWidth: 1320,
+    minHeight: 760,
     backgroundColor: '#0a0b10',
     title: 'MoeShelf',
     icon: appIcon(),

@@ -2,6 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== 主题 ===== */
+/* 暗色（默认）：不应用滤镜 */
+:root {
+  --gl-bg: #0a0b10;
+  --theme-filter: none;
+  color-scheme: dark;
+}
+html[data-theme='light'] {
+  --gl-bg: #f4f5f9;
+  /* V1 亮色：整体反色 + 色相回正（保留对比度与可读性），图片单独二次反色还原 */
+  --theme-filter: invert(1) hue-rotate(180deg);
+  color-scheme: light;
+}
+body {
+  background-color: var(--gl-bg);
+}
+/* 亮色下把位图（封面/截图等）再反一次，恢复原图颜色 */
+html[data-theme='light'] #moeshelf-root img {
+  filter: invert(1) hue-rotate(180deg);
+  -webkit-filter: invert(1) hue-rotate(180deg);
+}
+html[data-theme='light'] #moeshelf-root img.grayscale {
+  filter: invert(1) hue-rotate(180deg) grayscale(100%);
+  -webkit-filter: invert(1) hue-rotate(180deg) grayscale(100%);
+}
+html[data-theme='light'] #moeshelf-root img.r18-blur {
+  filter: invert(1) hue-rotate(180deg) blur(10px);
+  -webkit-filter: invert(1) hue-rotate(180deg) blur(10px);
+}
+html[data-theme='light'] #moeshelf-root img.grayscale.r18-blur {
+  filter: invert(1) hue-rotate(180deg) grayscale(100%) blur(10px);
+  -webkit-filter: invert(1) hue-rotate(180deg) grayscale(100%) blur(10px);
+}
+html[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.28);
+  border-color: var(--gl-bg);
+}
+html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.4);
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

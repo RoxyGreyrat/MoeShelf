@@ -13,15 +13,26 @@ export const viewport: Viewport = {
   themeColor: '#0a0b10',
 }
 
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('moeshelf-theme');var d;if(t==='light'||t==='dark'){d=t}else{d=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}document.documentElement.setAttribute('data-theme',d)}catch(e){document.documentElement.setAttribute('data-theme','dark')}})()`
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN" className="dark">
+    <html lang="zh-CN" className="dark" data-theme="dark">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-ink-950 text-white antialiased">
-        <ToastProvider>{children}</ToastProvider>
+        <div
+          id="moeshelf-root"
+          className="min-h-screen"
+          style={{ filter: 'var(--theme-filter, none)' }}
+        >
+          <ToastProvider>{children}</ToastProvider>
+        </div>
       </body>
     </html>
   )

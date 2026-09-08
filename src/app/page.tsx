@@ -490,9 +490,23 @@ function Header({
   scraping: boolean
   rootName?: string | null
 }) {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    typeof document !== 'undefined' &&
+    document.documentElement.getAttribute('data-theme') === 'light'
+      ? 'light'
+      : 'dark'
+  )
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light'
+    setTheme(next)
+    document.documentElement.setAttribute('data-theme', next)
+    try {
+      localStorage.setItem('moeshelf-theme', next)
+    } catch {}
+  }
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-ink-950/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-[1880px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <img
             src="/icon.png"
@@ -529,6 +543,14 @@ function Header({
           >
             <Icon name="refresh" className={`h-5 w-5 ${scanning ? 'animate-spin' : ''}`} />
             {scanning ? '正在扫描…' : '扫描游戏'}
+          </button>
+          <button
+            onClick={toggleTheme}
+            aria-label="切换亮暗主题"
+            title={theme === 'light' ? '切换到暗色' : '切换到亮色'}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-base text-white/60 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            {theme === 'light' ? '☀️' : '🌙'}
           </button>
           <button
             onClick={onOpenSettings}
@@ -3928,7 +3950,7 @@ export default function Page() {
         scraping={lib.scraping}
         rootName={lib.rootName}
       />
-      <main className="mx-auto max-w-[1600px] px-4 pb-28 pt-6 sm:px-6 lg:h-[calc(100vh-67px)] lg:overflow-hidden lg:pb-0">
+      <main className="mx-auto max-w-[1880px] px-4 pb-28 pt-6 sm:px-6 lg:h-[calc(100vh-67px)] lg:overflow-hidden lg:pb-0">
         {lib.games.length === 0 ? (
           <EmptyState onOpenSettings={() => setSettingsOpen(true)} scanning={lib.scanning} />
         ) : (
