@@ -15,6 +15,27 @@ import type {
   ScrapedData,
   Settings,
 } from './types'
+// SQLite 持久层（library/playtime/cache 三个 JSON 的内部存储迁移到 data/moeshelf.db）
+import { backupDbTo, closeDb } from './db'
+import { getAllGames, replaceAllGames } from './db/games'
+import {
+  accumulateGame,
+  getPlaytimeFile,
+  getPlaytimeMap,
+  migratePlaytimeHash,
+  replaceAllPlaytime,
+} from './db/playtime'
+import {
+  CACHE_SCHEMA,
+  clearCache as dbClearCache,
+  getCacheData as dbGetCacheData,
+  isCacheFresh,
+  loadCacheEntries,
+  loadCacheFile,
+  renameCacheKey,
+  saveCacheEntry as dbSaveCacheEntry,
+  saveCacheGames as dbSaveCacheGames,
+} from './db/scrape-cache'
 
 // ============ 模块 8621：data 目录解析 ============
 // 编译产物在模块加载时计算默认目录：path.join(process.cwd(), "data")。
@@ -56,16 +77,15 @@ export async function resolveDataDir(): Promise<string> {
 }
 
 /**
- * 模块 8621 Sl：把数据目录迁移到新路径。
- * 从“当前正在使用的数据目录”（location.json 重定向后也算）复制四个 json
- * 与 cache/images 到目标目录，再写 location.json 并更新缓存，返回新目录。
- * 修复 1.5.2：旧实现总是从默认目录复制，第二次迁移会复制到旧数据。
+ * 把数据目录迁移到新路径：复制 settings.json、cache/images，
+ * 用 SQLite backup API 生成一致性 moeshelf.db（WAL 安全），
+ * 再写 location.json 并关闭连接（下次访问自动在新目录重开）。
  */
 export async function changeDataDir(newPath: string): Promise<string> {
   const target = path.resolve(newPath)
   const current = await resolveDataDir()
   await fs.mkdir(target, { recursive: true })
-  for (const name of ['settings.json', 'cache.json', 'library.json', 'playtime.json']) {
+  for (const name of ['settings.json']) {
     const src = path.join(current, name)
     const dst = path.join(target, name)
     if (await fs.stat(src).catch(() => null)) {
@@ -80,6 +100,15 @@ export async function changeDataDir(newPath: string): Promise<string> {
       await fs.copyFile(path.join(srcImages, name), path.join(dstImages, name)).catch(() => {})
     }
   }
+  // SQLite：当前目录下先 checkpoint/备份成一致性副本，再关闭，便于新目录重开
+  if (current !== target) {
+    try {
+      await backupDbTo(path.join(target, 'moeshelf.db'))
+    } catch {
+      // 数据库不存在或打开失败时静默（首次使用目录迁移场景）
+    }
+  }
+  closeDb()
   await fs.mkdir(DEFAULT_DATA_DIR, { recursive: true })
   await fs.writeFile(
     path.join(DEFAULT_DATA_DIR, 'location.json'),
@@ -99,8 +128,8 @@ export async function readJson<T>(file: string, fallback: T): Promise<T> {
   }
 }
 
-// ============ 自动备份（新功能，叠加在原写逻辑上） ============
-const BACKED_UP_FILES = new Set(['library.json', 'settings.json', 'playtime.json'])
+// 自动备份仅剩 settings.json（library/playtime/cache 已迁 SQLite，备份改为 db 层负责）
+const BACKED_UP_FILES = new Set(['settings.json'])
 const BACKUP_KEEP = 5
 
 function backupStamp(d: Date): string {
@@ -229,172 +258,84 @@ export async function saveSettings(settings: Settings): Promise<void> {
   await updateSettings(settings)
 }
 
-// ============ 模块 263：library 读写 ============
-let libraryQueue: Promise<void> = Promise.resolve()
+// ============ 模块 263：library 读写（SQLite games 表） ============
 
-/** 读取 library.json 的 games 数组；失败返回 [] */
+/** 读取游戏数组（等价旧 loadLibrary()）；失败返回 [] */
 export async function loadLibrary(): Promise<LibraryGame[]> {
-  try {
-    const file = path.join(await resolveDataDir(), 'library.json')
-    const text = await fs.readFile(file, 'utf-8')
-    const parsed = JSON.parse(text)
-    return Array.isArray(parsed.games) ? parsed.games : []
-  } catch {
-    return []
-  }
+  return getAllGames().catch(() => [])
 }
 
-/** 读取完整 library.json（含 version/updatedAt），供导出备份使用 */
+/** 读取兼容结构的 LibraryFile，供导出备份使用 */
 export async function loadLibraryFile(): Promise<LibraryFile> {
-  try {
-    const file = path.join(await resolveDataDir(), 'library.json')
-    const text = await fs.readFile(file, 'utf-8')
-    const parsed = JSON.parse(text)
-    return {
-      version: typeof parsed.version === 'number' ? parsed.version : undefined,
-      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : undefined,
-      games: Array.isArray(parsed.games) ? parsed.games : [],
-    }
-  } catch {
-    return { games: [] }
-  }
+  const games = await getAllGames().catch(() => [])
+  return { version: 1, updatedAt: new Date().toISOString(), games }
 }
 
-/** 写 library.json：{version:1, updatedAt, games}（串行队列，同 263 o） */
-export function saveLibrary(games: LibraryGame[]): Promise<void> {
-  const task = libraryQueue.then(async () => {
-    const file = path.join(await resolveDataDir(), 'library.json')
-    await writeJsonAtomic(file, { version: 1, updatedAt: new Date().toISOString(), games })
-  })
-  libraryQueue = task.catch(() => {})
-  return task
+/** 全量保存（事务；等价旧 saveLibrary()） */
+export async function saveLibrary(games: LibraryGame[]): Promise<void> {
+  await replaceAllGames(games)
 }
 
-// ============ 模块 281：cache 读写 ============
-export const CACHE_SCHEMA = 2
+// ============ 模块 281：cache 读写（SQLite scrape_cache 表） ============
+// CACHE_SCHEMA / isCacheFresh 来自 db 层，这里对旧调用方保持导出。
+export { CACHE_SCHEMA, isCacheFresh }
 
-let cacheQueue: Promise<void> = Promise.resolve()
-
-/** 读取 cache.json 的 games 对象（同 281 tx）；失败返回 {} */
+/** 读取缓存对象 {key: CacheEntry}（等价旧 loadCacheGames()） */
 export async function loadCacheGames(): Promise<Record<string, CacheEntry>> {
-  try {
-    const file = path.join(await resolveDataDir(), 'cache.json')
-    const text = await fs.readFile(file, 'utf-8')
-    return JSON.parse(text).games ?? {}
-  } catch {
-    return {}
-  }
+  return loadCacheEntries().catch(() => ({}))
 }
 
-/** 读取完整 cache.json（含 version/updatedAt） */
+/** 读取完整 CacheFile（兼容导出结构） */
 export async function loadCache(): Promise<CacheFile> {
-  try {
-    const file = path.join(await resolveDataDir(), 'cache.json')
-    const text = await fs.readFile(file, 'utf-8')
-    const parsed = JSON.parse(text)
-    return {
-      version: typeof parsed.version === 'number' ? parsed.version : undefined,
-      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : undefined,
-      games: parsed.games ?? {},
-    }
-  } catch {
-    return { games: {} }
-  }
+  return loadCacheFile().catch(() => ({ games: {} }))
 }
 
-/** 保存/更新一条刮削缓存（同 281 NO：写入时强制 schema=2） */
-export function saveCacheEntry(entry: CacheEntry): Promise<void> {
-  const task = cacheQueue.then(async () => {
-    const games = await loadCacheGames()
-    games[entry.key] = { ...entry, schema: CACHE_SCHEMA }
-    const file = path.join(await resolveDataDir(), 'cache.json')
-    await writeJsonAtomic(file, { version: 1, updatedAt: new Date().toISOString(), games })
-  })
-  cacheQueue = task.catch(() => {})
-  return task
+/** 保存/更新一条刮削缓存（UPSERT，schema 强制 2） */
+export async function saveCacheEntry(entry: CacheEntry): Promise<void> {
+  await dbSaveCacheEntry({ ...entry, schema: CACHE_SCHEMA })
 }
 
-/** 整体写回缓存 games（供迁移等批量操作使用） */
-export function saveCacheGames(games: Record<string, CacheEntry>): Promise<void> {
-  const task = cacheQueue.then(async () => {
-    const file = path.join(await resolveDataDir(), 'cache.json')
-    await writeJsonAtomic(file, { version: 1, updatedAt: new Date().toISOString(), games })
-  })
-  cacheQueue = task.catch(() => {})
-  return task
+/** 整体写回缓存 games（事务） */
+export async function saveCacheGames(games: Record<string, CacheEntry>): Promise<void> {
+  await dbSaveCacheGames(games)
 }
 
-/** 清空缓存（同 281 LK） */
-export function clearCache(): Promise<void> {
-  const task = cacheQueue.then(async () => {
-    const file = path.join(await resolveDataDir(), 'cache.json')
-    await writeJsonAtomic(file, { version: 1, updatedAt: new Date().toISOString(), games: {} })
-  })
-  cacheQueue = task.catch(() => {})
-  return task
+/** 清空缓存 */
+export async function clearCache(): Promise<void> {
+  await dbClearCache()
 }
 
-/** 条目是否新鲜（同 281 p7：成功 90 天 / 失败 3 天，且 scrape 时间不能在未来） */
-export function isCacheFresh(entry: CacheEntry): boolean {
-  const age = Date.now() - new Date(entry.scrapedAt).getTime()
-  const maxAge = entry.success ? 7776e6 : 2592e5
-  return age >= 0 && age < maxAge
-}
-
-/** 按键取新鲜缓存的数据（同 281 EM）；无有效数据返回 null */
+/** 按键取新鲜缓存的数据（同旧 getCacheData）；无有效数据返回 null */
 export async function getCacheData(key: string): Promise<ScrapedData | null> {
-  const entry = (await loadCacheGames())[key]
-  return entry && entry.schema === CACHE_SCHEMA && isCacheFresh(entry) ? entry.data : null
+  return dbGetCacheData(key)
 }
 
-// ============ 模块 667：playtime 读写 ============
-let playtimeQueue: Promise<void> = Promise.resolve()
+// ============ 模块 667：playtime 读写（SQLite playtime 表） ============
 
-/** 读取 playtime.json 的 games 对象；失败返回 {} */
+/** 读取游玩时长对象 {hash: PlaytimeGame}（等价旧 loadPlaytimeGames()） */
 export async function loadPlaytimeGames(): Promise<Record<string, PlaytimeGame>> {
-  try {
-    const file = path.join(await resolveDataDir(), 'playtime.json')
-    const text = await fs.readFile(file, 'utf-8')
-    return JSON.parse(text).games ?? {}
-  } catch {
-    return {}
-  }
+  return getPlaytimeMap().catch(() => ({}))
 }
 
-/** 读取完整 playtime.json（含 version/updatedAt） */
+/** 读取完整 PlaytimeFile（兼容导出结构） */
 export async function loadPlaytime(): Promise<PlaytimeFile> {
-  try {
-    const file = path.join(await resolveDataDir(), 'playtime.json')
-    const text = await fs.readFile(file, 'utf-8')
-    const parsed = JSON.parse(text)
-    return {
-      version: typeof parsed.version === 'number' ? parsed.version : 1,
-      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : '',
-      games: parsed.games ?? {},
-    }
-  } catch {
-    return { version: 1, updatedAt: '', games: {} }
-  }
+  return getPlaytimeFile().catch(() => ({ version: 1, updatedAt: '', games: {} }))
 }
 
-/** 写 playtime.json：{version:1, updatedAt, games}（串行队列） */
-export function savePlaytime(file: PlaytimeFile): Promise<void> {
-  const task = playtimeQueue.then(async () => {
-    const target = path.join(await resolveDataDir(), 'playtime.json')
-    await writeJsonAtomic(target, { version: 1, updatedAt: new Date().toISOString(), games: file.games })
-  })
-  playtimeQueue = task.catch(() => {})
-  return task
+/** 全量写回（事务） */
+export async function savePlaytime(file: PlaytimeFile): Promise<void> {
+  await replaceAllPlaytime(file.games)
 }
 
-/** 累加游玩时长（同 667 $：hash 为空或分钟数 <=0.15 时跳过，sessions+1） */
+/** 累加游玩时长（hash 为空或分钟数 <=0.15 时跳过，sessions+1） */
 export function addPlaytime(hash: string, minutes: number, playedAt: number): Promise<void> {
   return accumulatePlaytime(hash, minutes, playedAt, false)
 }
 
 /**
- * 累加游玩时长（带 skipSession 的底层实现，同 launch 路由内嵌的 667 $）：
+ * 累加游玩时长（带 skipSession 的底层实现）：
  * skipSession=true 时只加时长不加次数（用于 60 秒定时累计）。
+ * 单条 UPSERT，不再整体读回写回。
  */
 export function accumulatePlaytime(
   hash: string,
@@ -403,19 +344,7 @@ export function accumulatePlaytime(
   skipSession: boolean
 ): Promise<void> {
   if (!hash || !(minutes > 0.15)) return Promise.resolve()
-  const task = playtimeQueue.then(async () => {
-    const games = await loadPlaytimeGames()
-    const prev = games[hash] ?? { minutes: 0, sessions: 0, lastPlayed: '' }
-    games[hash] = {
-      minutes: Math.round((prev.minutes + minutes) * 10) / 10,
-      sessions: prev.sessions + (skipSession ? 0 : 1),
-      lastPlayed: new Date(playedAt).toISOString(),
-    }
-    const file = path.join(await resolveDataDir(), 'playtime.json')
-    await writeJsonAtomic(file, { version: 1, updatedAt: new Date().toISOString(), games })
-  })
-  playtimeQueue = task.catch(() => {})
-  return task
+  return accumulateGame(hash, minutes, playedAt, skipSession)
 }
 
 // ============ 模块 644：pathHash / 缓存键 ============
@@ -482,46 +411,23 @@ export async function migrateGameAssociations(
     // 映射迁移失败不影响路径修改本身
   }
 
-  // 2) 游玩时长
+  // 2) 游玩时长（SQLite：合并到新 hash 并删除旧键）
   try {
-    const playtime = await loadPlaytime()
-    const old = playtime.games[oldHash]
-    if (old) {
-      const cur = playtime.games[newHash]
-      playtime.games[newHash] = {
-        minutes: Math.round(((cur?.minutes ?? 0) + (old.minutes ?? 0)) * 10) / 10,
-        sessions: (cur?.sessions ?? 0) + (old.sessions ?? 0),
-        lastPlayed: [cur?.lastPlayed ?? '', old.lastPlayed ?? '']
-          .filter(Boolean)
-          .sort()
-          .pop() || '',
-      }
-      delete playtime.games[oldHash]
-      await savePlaytime(playtime)
-    }
+    await migratePlaytimeHash(oldHash, newHash)
   } catch {
     // 游玩时长迁移失败不影响路径修改本身
   }
 
-  // 3) 刮削缓存键（folderName::pathHash）
+  // 3) 刮削缓存键（folderName::pathHash；SQLite 行重命名）
   try {
-    const all = await loadCacheGames()
     const newKey = cacheKeyOf(newFolderName, newHash)
-    let moved = false
+    const all = await loadCacheGames()
     for (const key of Object.keys(all)) {
-      if (key.endsWith(`::${oldHash}`) && key !== newKey && !all[newKey]) {
-        all[newKey] = {
-          ...all[key],
-          key: newKey,
-          name: newFolderName || all[key].name,
-          folderPath: newFolderPath || all[key].folderPath,
-        }
-        delete all[key]
-        moved = true
+      if (key.endsWith(`::${oldHash}`) && key !== newKey) {
+        await renameCacheKey(key, newKey, newFolderName, newFolderPath)
         break
       }
     }
-    if (moved) await saveCacheGames(all)
   } catch {
     // 缓存迁移失败只意味着下次会重新刮削
   }
