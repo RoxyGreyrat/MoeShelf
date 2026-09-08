@@ -39,7 +39,7 @@ export function rowToGame(r: GameRow): LibraryGame {
     pathHash: r.path_hash,
     fileCount: r.file_count,
     exeCandidates: jsonArr<LibraryGame['exeCandidates']>(r.exe_candidates, []),
-    matchScore: r.match_score == null ? undefined : r.match_score,
+    matchScore: r.match_score == null ? 0 : r.match_score,
     matchedTypes: jsonArr<string[]>(r.matched_types, []),
     rootPath: r.root_path ?? '',
     savedAt: r.saved_at,

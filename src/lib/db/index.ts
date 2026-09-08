@@ -97,10 +97,10 @@ export async function backupDbTo(targetPath: string): Promise<string> {
   return targetPath
 }
 
-/** 应用级事务包装：fn 内使用 handle */
+/** 应用级事务包装：fn 内使用 db 句柄（同步 SQL 操作） */
 export async function withTransaction<T>(fn: (db: Database.Database) => T): Promise<T> {
   const db = await getDb()
-  const run = db.transaction(fn) as () => T
+  const run = db.transaction(fn as unknown as (...args: unknown[]) => T) as () => T
   return run()
 }
 
