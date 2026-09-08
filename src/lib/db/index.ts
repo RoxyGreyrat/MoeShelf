@@ -53,7 +53,12 @@ export function getDb(): Promise<Database.Database> {
       ensureSchema(db)
       await migrateIfLegacy(db, dir)
     } catch (err) {
-      // 迁移失败：回滚——关闭并删除本次创建的不完整库文件，保留旧 JSON
+      // 迁移失败：打印原因（供 CI/日志排查），回滚——删除本次创建的不完整库文件
+      try {
+        console.error('[db:migration] failed:', err && (err as Error).message ? (err as Error).message : err)
+      } catch {
+        // ignore logging errors
+      }
       try {
         db.close()
       } catch {
