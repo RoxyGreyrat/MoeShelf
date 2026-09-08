@@ -9,6 +9,11 @@ data
 # 编译产物
 MoeShelf.exe
 
+# 桌面版（Electron）构建产物
+desktop/node_modules
+desktop/dist
+desktop/webapp
+
 # 个人一键脚本（仅本地使用，不入库）
 sync-to-github.bat
 release-to-github.bat

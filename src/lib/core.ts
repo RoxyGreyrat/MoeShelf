@@ -18,8 +18,12 @@ import type {
 
 // ============ 模块 8621：data 目录解析 ============
 // 编译产物在模块加载时计算默认目录：path.join(process.cwd(), "data")。
-// 可通过 data/location.json 中的 dataPath 重定向（changeDataDir 写入）。
-export const DEFAULT_DATA_DIR = path.join(process.cwd(), 'data')
+// 桌面版（Electron）可通过环境变量 MOESHELF_DATA_DIR 指定数据根目录（绿色/便携场景），
+// 普通 web 运行不设置该变量，行为不变。
+// 也可通过 data/location.json 中的 dataPath 重定向（changeDataDir 写入）。
+export const DEFAULT_DATA_DIR = process.env.MOESHELF_DATA_DIR
+  ? path.resolve(process.env.MOESHELF_DATA_DIR)
+  : path.join(process.cwd(), 'data')
 
 let dataDirCache: string | null = null
 

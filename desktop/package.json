@@ -1,0 +1,53 @@
+{
+  "name": "moeshelf-desktop",
+  "productName": "MoeShelf",
+  "version": "1.6.0",
+  "description": "MoeShelf desktop app - windowed UI, no browser or Node.js needed",
+  "main": "main.js",
+  "author": "Moeshelf",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.moeshelf.desktop",
+    "productName": "MoeShelf",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "webapp",
+        "to": "webapp"
+      },
+      {
+        "from": "icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.ico"
+    },
+    "portable": {
+      "artifactName": "MoeShelf-${version}-win-x64.${ext}"
+    }
+  }
+}

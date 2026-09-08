@@ -1,0 +1,60 @@
+name: Desktop exe (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install web app dependencies
+        run: npm ci
+
+      - name: Build web app (Next.js)
+        run: npm run build
+
+      - name: Stage web runtime
+        shell: pwsh
+        run: |
+          node pack.js "$env:RUNNER_TEMP\webapp"
+          if (Test-Path "$env:RUNNER_TEMP\webapp\data") { Remove-Item "$env:RUNNER_TEMP\webapp\data" -Recurse -Force }
+          if (Test-Path "$env:RUNNER_TEMP\webapp\launcher.log") { Remove-Item "$env:RUNNER_TEMP\webapp\launcher.log" -Force }
+
+      - name: Copy runtime into desktop/webapp
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "desktop\webapp" | Out-Null
+          Copy-Item -Path "$env:RUNNER_TEMP\webapp\*" -Destination "desktop\webapp" -Recurse -Force
+          if (Test-Path "desktop\webapp\data") { Remove-Item "desktop\webapp\data" -Recurse -Force }
+          Copy-Item -Path "src\app\icon.ico" -Destination "desktop\icon.ico" -Force
+
+      - name: Install desktop deps and build portable exe
+        working-directory: desktop
+        run: |
+          npm install
+          npx electron-builder --win portable --x64
+
+      - name: Upload exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoeShelf-win-x64
+          path: desktop/dist/*.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/dist/*.exe
+          fail_on_unmatched_files: false

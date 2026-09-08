@@ -152,6 +152,23 @@ data/
 
 生成与正式发布版相同结构的「解压即用」目录。
 
+### 桌面版（Windows exe，无需浏览器）
+
+`desktop/` 提供 Electron 桌面壳：内置 Next 服务端与自带窗口渲染同一套界面，**双击 exe 即用——不需要安装 Node.js，也不会调用系统浏览器**。
+
+- 代码仓库已配置 GitHub Actions（`.github/workflows/desktop-build.yml`）：
+  - 推送形如 `v1.6.0` 的标签，或在 Actions 页手动运行 `Desktop exe (Windows)`，即自动产出 `MoeShelf-<版本>-win-x64.exe` 并挂到 Release；
+  - 也可本地构建（需要能联网安装依赖）：
+    ```bash
+    npm run build
+    node pack.js <临时目录>      # 产出 webapp 运行时
+    copy /Y <临时目录> desktop\webapp
+    cd desktop
+    npm install
+    npx electron-builder --win portable --x64   # 产物在 desktop\dist\
+    ```
+- 数据目录：便携 exe 与 exe 同目录的 `data\`（绿色随身）；安装形态则存于系统用户数据目录。服务端支持 `MOESHELF_DATA_DIR` 环境变量覆盖数据位置。
+
 ---
 
 ## 数据与隐私
