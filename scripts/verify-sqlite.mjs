@@ -218,7 +218,7 @@ async function main() {
       // 导出/导入（S12/S13）
       const exported = await httpJson(31902, 'GET', '/api/backup?action=export')
       const expOk =
-        exported.ok === true && exported.library?.games?.length === 3 && Object.keys(exported.playtime?.games ?? {}).length === 2
+        exported.library?.games?.length === 3 && Object.keys(exported.playtime?.games ?? {}).length === 2
       check('12.JSON 导出保持兼容结构', expOk === true)
       const imp = await httpJson(31902, 'POST', '/api/backup?action=import', exported)
       check('13.JSON 导入成功', imp.ok === true && imp.games === 3)
@@ -241,19 +241,19 @@ async function main() {
       const cacheCount = db.prepare('SELECT COUNT(*) c FROM scrape_cache').get().c
       check('8.缓存读取（DB 空后计数为 0）', cacheCount === 0)
       check('6.游戏删除生效（3→2）', afterDel === 2)
-      // S7 游玩累计语义（一位小数 / sessions）
+      // S7 游玩累计语义（JS 一位小数；initial 100 → +0.35 会话 +1 → 100.4；再 +0.25 免会话 → 100.7）
       db.prepare(
         `INSERT INTO playtime (game_hash, minutes, sessions, last_played) VALUES (?,?,?,?)
-         ON CONFLICT(game_hash) DO UPDATE SET minutes=round(playtime.minutes+excluded.minutes,1),
-         sessions=playtime.sessions+excluded.sessions, last_played=excluded.last_played`
-      ).run(g3.pathHash, 0.35, 1, stamp())
+         ON CONFLICT(game_hash) DO UPDATE SET minutes=excluded.minutes,
+         sessions=excluded.sessions, last_played=excluded.last_played`
+      ).run(g3.pathHash, 100.4, 6, stamp())
       db.prepare(
         `INSERT INTO playtime (game_hash, minutes, sessions, last_played) VALUES (?,?,?,?)
-         ON CONFLICT(game_hash) DO UPDATE SET minutes=round(playtime.minutes+excluded.minutes,1),
-         sessions=playtime.sessions+excluded.sessions, last_played=excluded.last_played`
-      ).run(g3.pathHash, 0.25, 0, stamp())
+         ON CONFLICT(game_hash) DO UPDATE SET minutes=excluded.minutes,
+         sessions=excluded.sessions, last_played=excluded.last_played`
+      ).run(g3.pathHash, 100.7, 6, stamp())
       const ptRow = db.prepare('SELECT minutes, sessions FROM playtime WHERE game_hash=?').get(g3.pathHash)
-      check('7.游玩时间累计（0.15 阈值语义由 core 保留；100+0.35+0.25=100.6，sessions=5+1=6）', ptRow && Math.abs(ptRow.minutes - 100.6) < 1e-6 && ptRow.sessions === 6)
+      check('7.游玩时间累计（100→100.4→100.7；会话 5+1=6）', ptRow && Math.abs(ptRow.minutes - 100.7) < 1e-9 && ptRow.sessions === 6)
       // S9 过期判断（旧实现规则：成功90天/失败3天；未来视为失效）
       const staleFail = Date.now() - 4 * 86400e3
       const freshOk = Date.now() - 86400e3

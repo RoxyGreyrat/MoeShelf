@@ -45,8 +45,8 @@ export async function replaceAllPlaytime(map: Record<string, PlaytimeGame>): Pro
 }
 
 /**
- * 累加（UPSERT，不整体读回）。阈值判断（minutes>0.15、hash 非空）由调用方保留，
- * 这里只做数值语义：一位小数、skipSession 不增加次数、lastPlayed 取本次。
+ * 累加（事务内读-算-写，与旧 JSON 语义一致：JS 一位小数四舍五入、skipSession 不加次数）。
+ * 阈值判断（minutes>0.15、hash 非空）由调用方保留。
  */
 export async function accumulateGame(
   hash: string,
@@ -55,13 +55,23 @@ export async function accumulateGame(
   skipSession: boolean
 ): Promise<void> {
   const db = await getDb()
-  db.prepare(
-    `INSERT INTO playtime (game_hash, minutes, sessions, last_played) VALUES (?, ?, ?, ?)
-     ON CONFLICT(game_hash) DO UPDATE SET
-       minutes = round(playtime.minutes + excluded.minutes, 1),
-       sessions = playtime.sessions + excluded.sessions,
-       last_played = excluded.last_played`
-  ).run(hash, round1(minutes), skipSession ? 0 : 1, new Date(playedAt).toISOString())
+  const lastPlayed = new Date(playedAt).toISOString()
+  const tx = db.transaction(() => {
+    const row = db
+      .prepare('SELECT minutes, sessions FROM playtime WHERE game_hash = ?')
+      .get(hash) as PlaytimeRow | undefined
+    const curMinutes = row ? row.minutes : 0
+    const nextMinutes = Math.round((curMinutes + minutes) * 10) / 10
+    const nextSessions = (row ? row.sessions : 0) + (skipSession ? 0 : 1)
+    db.prepare(
+      `INSERT INTO playtime (game_hash, minutes, sessions, last_played) VALUES (?, ?, ?, ?)
+       ON CONFLICT(game_hash) DO UPDATE SET
+         minutes = excluded.minutes,
+         sessions = excluded.sessions,
+         last_played = excluded.last_played`
+    ).run(hash, nextMinutes, nextSessions, lastPlayed)
+  })
+  tx()
   void maybeAutoBackupDb()
 }
 

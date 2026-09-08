@@ -140,8 +140,10 @@ export async function maybeAutoBackupDb(): Promise<void> {
 /** 应用级事务包装：fn 内使用 db 句柄（同步 SQL 操作），成功后触发自动备份 */
 export async function withTransaction<T>(fn: (db: Database.Database) => T): Promise<T> {
   const db = await getDb()
-  const run = db.transaction(fn as unknown as (...args: unknown[]) => T) as () => T
-  const result = run()
+  const run = db.transaction(fn as unknown as (...args: unknown[]) => T) as (
+    d: Database.Database
+  ) => T
+  const result = run(db)
   void maybeAutoBackupDb()
   return result
 }
