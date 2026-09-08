@@ -1,7 +1,7 @@
 {
   "name": "moeshelf-desktop",
   "productName": "MoeShelf",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "MoeShelf desktop app - windowed UI, no browser or Node.js needed",
   "main": "main.js",
   "author": "Moeshelf",

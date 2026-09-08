@@ -14,7 +14,7 @@
 
 自动扫描 · 多源刮削 · 中文信息 · 游玩记录 · 局域网访问
 
-当前版本：`v1.6.0`
+当前版本：`v1.6.1`
 
 ---
 
@@ -71,10 +71,16 @@
 
 * 按开发商查看 VNDB 中尚未下载的作品，方便规划收藏
 * 缓存异常时自动重新获取数据
-* 自动备份，保留最近 5 份
-* 支持 JSON 导入 / 导出
+* 数据存储于 SQLite（`data/moeshelf.db`），旧版 JSON 首启自动无损迁移并备份
+* 自动备份，保留最近 5 份（数据库一致性副本）
+* 支持 JSON 导入 / 导出（与旧版格式兼容）
 * 支持 CSV 导出
 * 游戏库升级时可保留 `data/` 目录，实现无损迁移
+
+### 界面与主题
+
+* 顶栏 🌙/☀ 一键切换亮 / 暗主题，首次默认跟随系统并记忆选择
+* 桌面窗口默认 1560×940（最小 1320×760），大窗口内容自动加宽，右栏不因窗口过小而消失
 
 ### 局域网访问
 
@@ -157,7 +163,7 @@ data/
 `desktop/` 提供 Electron 桌面壳：内置 Next 服务端与自带窗口渲染同一套界面，**双击 exe 即用——不需要安装 Node.js，也不会调用系统浏览器**。
 
 - 代码仓库已配置 GitHub Actions（`.github/workflows/desktop-build.yml`）：
-  - 推送形如 `v1.6.0` 的标签，或在 Actions 页手动运行 `Desktop exe (Windows)`，即自动产出 `MoeShelf-<版本>-win-x64.exe` 并挂到 Release；
+  - 推送形如 `v1.6.1` 的标签，或在 Actions 页手动运行 `Desktop exe (Windows)`，即自动产出 `MoeShelf-<版本>-win-x64.exe` 并挂到 Release；
   - 也可本地构建（需要能联网安装依赖）：
     ```bash
     npm run build
@@ -179,10 +185,16 @@ Moeshelf 是一个本地收藏管理工具。
 
 ```text
 data/
-├── backup/      # 自动备份
-├── cache/       # 刮削与图片缓存
-└── ...
+├── moeshelf.db        # 主数据（SQLite：游戏库 / 游玩记录 / 刮削缓存）
+├── backup/            # 自动备份（数据库一致性副本，保留最近 5 份）
+├── cache/images/      # 封面 / 图片文件缓存
+├── migration-backup/  # 旧 JSON 首次迁移的备份（library / playtime / cache.json）
+├── settings.json      # 设置
+└── location.json      # 数据目录定位
 ```
+
+首次启动 1.6.1 时会自动把旧版 `library.json / playtime.json / cache.json` 无损迁入 `moeshelf.db`，
+原 JSON 复制到 `migration-backup/` 保留；升级前请保留 `data/` 目录。
 
 不会将你的游戏库、游玩记录等个人数据上传到 Moeshelf 自有服务器。
 

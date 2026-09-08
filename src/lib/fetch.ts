@@ -6,7 +6,7 @@ import { loadSettings } from './core'
 
 /** 模块 8026 yZ：通用 UA */
 export const UA_STRING =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Moeshelf/1.6.0'
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Moeshelf/1.6.1'
 
 let cachedAgent: ProxyAgent | null = null
 let cachedProxy = ''
