@@ -46,7 +46,7 @@ fs.rmSync(nextDir, { recursive: true, force: true })
 copyDir(path.join(root, '.next'), nextDir)
 
 // 3. 启动脚本与文档
-for (const f of ['launcher.js', '启动.bat', '开启局域网访问.bat', 'README.md', '更新日志.md', 'LICENSE']) {
+for (const f of ['launcher.js', 'MoeShelf.exe', '启动.bat', '开启局域网访问.bat', 'README.md', '更新日志.md', 'LICENSE']) {
   const s = path.join(root, f)
   if (fs.existsSync(s)) fs.copyFileSync(s, path.join(target, f))
 }
