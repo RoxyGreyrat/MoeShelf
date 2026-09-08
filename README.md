@@ -12,10 +12,6 @@
 
 <div align="center">
 
-# Moeshelf
-
-**本地 Galgame 收藏管理工具**
-
 自动扫描 · 多源刮削 · 中文信息 · 游玩记录 · 局域网访问
 
 当前版本：`v1.6.0`
@@ -23,8 +19,11 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/example.png" alt="Moeshelf 主界面" width="900">
+  <img src="docs/screenshots/example.png" alt="MoeShelf 主界面" width="900">
 </p>
+
+---
+
 
 ---
 
