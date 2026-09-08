@@ -212,6 +212,7 @@ async function main() {
     }
 
     // ---------- S6/S7/S8/S9/S10/S15：直接 DB 断言 + 重启持久 ----------
+    // 说明：S6 删除 g2 后游戏数为 2；S10 再插入 ATRI 新 hash 一行，总数回到 3。
     const db = await openDb(dir2)
     try {
       // S6 增删改（数据库写入路径）
@@ -264,11 +265,11 @@ async function main() {
       const res = await httpJson(31903, 'POST', '/api/storage', { path: dir3 })
       check('11.数据目录迁移（location.json 更新 + db 一致性副本）', res.ok === true && res.dataPath.toLowerCase() === dir3.toLowerCase())
       const libAfter = await httpJson(31903, 'GET', '/api/library')
-      check('11b.迁移后游戏库仍存在（2 个）', libAfter.ok === true && libAfter.games.length === 2)
+      check('11b.迁移后游戏库仍存在（3 个）', libAfter.ok === true && libAfter.games.length === 3)
       const dbMoved = await openDb(dir3)
       const movedCount = dbMoved.prepare('SELECT COUNT(*) c FROM games').get().c
       dbMoved.close()
-      check('11c.新目录 moeshelf.db 数据完整', movedCount === 2)
+      check('11c.新目录 moeshelf.db 数据完整', movedCount === 3)
     } finally {
       await stop(s3)
     }
@@ -278,8 +279,8 @@ async function main() {
     try {
       const lib = await httpJson(31904, 'GET', '/api/library')
       const pt = await httpJson(31904, 'GET', '/api/playtime')
-      const ok15 = lib.ok && lib.games.length === 2 && Object.keys(pt.games).length >= 2
-      check('15.重启后数据仍然存在（games=2, playtime 保留）', ok15 === true)
+      const ok15 = lib.ok && lib.games.length === 3 && Object.keys(pt.games).length >= 2
+      check('15.重启后数据仍然存在（games=3, playtime 保留）', ok15 === true)
     } finally {
       await stop(s4)
     }

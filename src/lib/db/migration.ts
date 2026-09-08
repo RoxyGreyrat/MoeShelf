@@ -76,11 +76,12 @@ export async function migrateIfLegacy(db: Database.Database, dir: string): Promi
       `playtime 迁移数量不一致：源 ${Object.keys(playtime).length} / 库 ${Object.keys(ptInDb).length}`
     )
   }
-  // 3) cache（force schema）
+  // 3) cache（force schema；key 兜底用对象键，兼容个别缺 key 字段的旧条目）
   const cache = cacheRaw ? asCache(cacheRaw) : {}
   const forced: Record<string, CacheEntry> = {}
-  for (const e of Object.values(cache)) {
-    forced[e.key] = { ...e, schema: CACHE_SCHEMA }
+  for (const [k, e] of Object.entries(cache)) {
+    const key = e.key && typeof e.key === 'string' ? e.key : k
+    forced[key] = { ...e, key, schema: CACHE_SCHEMA }
   }
   await saveCacheGames(forced)
   const cacheInDb = await loadCacheEntries()
