@@ -89,6 +89,36 @@ src/
 pack.js            发布目录打包脚本
 ```
 
+## 参考与致谢
+
+本项目站在以下开源项目与社区服务之上，特此致谢。
+
+### 运行时框架与依赖
+
+| 项目 | 用途 | 许可证 |
+| --- | --- | --- |
+| [Next.js](https://github.com/vercel/next.js) | Web 应用框架与路由 | MIT |
+| [React](https://github.com/facebook/react) | 界面组件库 | MIT |
+| [TypeScript](https://github.com/microsoft/TypeScript) | 开发语言 | Apache-2.0 |
+| [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) | 样式方案 | MIT |
+| [undici](https://github.com/nodejs/undici) | HTTP 客户端（代理/超时封装） | MIT |
+| [cheerio](https://github.com/cheeriojs/cheerio) | HTML 解析（部分源） | MIT |
+| [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) | 局域网访问二维码 | MIT |
+
+### 元数据数据源（通过公开 API 调用，非代码依赖）
+
+- [VNDB](https://vndb.org) — 主元数据：封面、发售日、评分、会社作品列表（VNDB API）。
+- [Bangumi](https://bgm.tv)（开源仓库 [bangumi/server](https://github.com/bangumi/server)，AGPL-3.0）— 中文标题、简介、角色与声优（`api.bgm.tv`）；本项目仅调用其公开 API，未复制或链接其代码。
+- [YMgal](https://www.ymgal.games) — 中文标题、简介、角色（开放 API）。
+- [CnGal](https://www.cngal.org)（仓库 [CnGal/CnGalWebSite](https://github.com/CnGal/CnGalWebSite)，MIT）— 中文简介、角色（`api.cngal.org`）。
+- [Moyu · 鲲 Galgame 补丁](https://www.moyu.moe)（[KunMoe/kun-galgame-patch](https://github.com/KunMoe/kun-galgame-patch)，AGPL-3.0）— **中文简介优先源**：多语言简介、中文名等。本项目仅调用其公开 API 获取文字元数据，未复制或链接其代码，其 AGPL 协议不影响本项目自身代码的 MIT 许可。
+
+### 文档格式与设计参考
+
+- 更新日志结构参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；
+- 版本号遵循[语义化版本（SemVer）](https://semver.org/lang/zh-CN/)；
+- 产品形态启发自本地媒体库软件 [Infuse](https://firecore.com/infuse)（商业软件，非开源）。
+
 ## 免责声明
 
 本项目仅提供**本地收藏管理与元数据检索**能力，不提供、不聚合任何盗版游戏或补丁资源本体。游戏与相关素材版权归其权利方所有，请在遵守当地法律与各站点服务条款的前提下使用本工具。
