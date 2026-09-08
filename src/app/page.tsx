@@ -1329,6 +1329,14 @@ function GameDetailModal({
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
       <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
         <button
+          onClick={() => setManageOpen(v => !v)}
+          aria-label="管理（设置）"
+          title="管理（设置）"
+          className="absolute right-12 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/70 backdrop-blur transition hover:bg-black/70 hover:text-white"
+        >
+          <Icon name="settings" className="h-4 w-4" />
+        </button>
+        <button
           onClick={onClose}
           aria-label="关闭"
           className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/70 backdrop-blur transition hover:bg-black/70 hover:text-white"
@@ -1337,8 +1345,8 @@ function GameDetailModal({
         </button>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col md:flex-row">
-            <div className="relative hidden md:block md:w-72 md:shrink-0 md:min-h-[420px]">
-              <div className="absolute inset-0 detail-cover overflow-hidden md:rounded-l-2xl">
+            <div className="relative hidden md:block md:w-72 md:shrink-0">
+              <div className="aspect-[3/4] w-full overflow-hidden md:rounded-l-2xl">
                 {coverUrl ? (
                   <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
                 ) : (
@@ -1594,45 +1602,8 @@ function GameDetailModal({
                   </p>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3">
-                {!nd && (
-                  <button
-                    onClick={() => void doRescrape()}
-                    disabled={rescrapeBusy || v.status === 'scraping'}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
-                  >
-                    {rescrapeBusy || v.status === 'scraping' ? (
-                      <>
-                        <Spinner className="h-3 w-3" /> 获取中…
-                      </>
-                    ) : (
-                      <>
-                        <Icon name="refresh" className="h-3 w-3" /> 重新获取信息
-                      </>
-                    )}
-                  </button>
-                )}
-                {metadata?.vndbUrl && (
-                  <a
-                    href={metadata.vndbUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/[0.12] hover:text-white"
-                  >
-                    VNDB <Icon name="external" className="h-3 w-3" />
-                  </a>
-                )}
-                <button
-                  onClick={() => setManageOpen(e => !e)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                    manageOpen
-                      ? 'bg-indigo-500/20 text-indigo-200'
-                      : 'bg-white/[0.07] text-white/80 hover:bg-white/[0.12] hover:text-white'
-                  }`}
-                >
-                  <Icon name="settings" className="h-3 w-3" /> 管理（设置）
-                </button>
-                <span className="ml-auto text-[10px] text-white/25">
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/[0.06] pt-3">
+                <span className="text-[10px] text-white/25">
                   {nd
                     ? `VNDB #${metadata?.vndbId || ''}`
                     : metadata?.scrapedAt
@@ -1644,8 +1615,52 @@ function GameDetailModal({
           </div>
         </div>
         {manageOpen && (
-          <div className="max-h-[45%] overflow-y-auto border-t border-white/[0.08] bg-black/20 p-3">
-            <div className="grid gap-2 sm:grid-cols-2">
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4">
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setManageOpen(false)} />
+            <div className="relative flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] px-4 py-3">
+                <h3 className="text-sm font-semibold text-white/85">管理（设置）</h3>
+                <div className="flex items-center gap-2">
+                  {!nd && (
+                    <button
+                      onClick={() => void doRescrape()}
+                      disabled={rescrapeBusy || v.status === 'scraping'}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/[0.12] hover:text-white disabled:opacity-50"
+                    >
+                      {rescrapeBusy || v.status === 'scraping' ? (
+                        <>
+                          <Spinner className="h-3 w-3" /> 获取中…
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="refresh" className="h-3 w-3" /> 重新获取信息
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {metadata?.vndbUrl && (
+                    <a
+                      href={metadata.vndbUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-white/80 transition hover:bg-white/[0.12] hover:text-white"
+                    >
+                      VNDB <Icon name="external" className="h-3 w-3" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => setManageOpen(false)}
+                    aria-label="关闭管理"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.07] text-white/70 transition hover:bg-white/[0.12] hover:text-white"
+                  >
+                    <Icon name="x" className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto p-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] px-3 py-2 text-xs text-white/55 sm:col-span-2">
+                  在此修改标题 / 封面 / 条目 / 启动程序 / 厂商 / 路径，或管理角色与声优；改动即时保存。
+                </div>
               <div>
                 <SectionRow
                   active={section === 'title'}
@@ -2052,6 +2067,7 @@ function GameDetailModal({
               )}
             </div>
           </div>
+        </div>
         )}
       </div>
     </div>

@@ -94,11 +94,6 @@ html[data-theme='light'] [class*='from-white'][class*='bg-clip-text'] {
   -webkit-text-fill-color: #232833 !important;
 }
 
-/* 详情页封面：完整显示（contain），不裁剪；卡片封面保持默认 cover */
-.detail-cover img {
-  object-fit: contain !important;
-}
-
 /* 亮色滚动条 */
 html[data-theme='light'] ::-webkit-scrollbar-thumb {
   background: rgba(15, 23, 42, 0.25);
