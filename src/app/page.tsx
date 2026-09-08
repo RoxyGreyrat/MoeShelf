@@ -499,7 +499,7 @@ function Header({
           </div>
           <div className="leading-tight">
             <h1 className="bg-gradient-to-r from-white via-white to-white/60 bg-clip-text text-lg font-bold text-transparent">
-              Galgame 启动器
+              Moeshelf
             </h1>
             <p className="text-[11px] text-white/40">本地 · 私密 · 自动</p>
           </div>
