@@ -1337,8 +1337,8 @@ function GameDetailModal({
         </button>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col md:flex-row">
-            <div className="relative hidden md:block md:w-72 md:shrink-0">
-              <div className="aspect-[3/4] w-full overflow-hidden md:rounded-l-2xl">
+            <div className="relative hidden md:block md:w-72 md:shrink-0 md:min-h-[420px]">
+              <div className="absolute inset-0 detail-cover overflow-hidden md:rounded-l-2xl">
                 {coverUrl ? (
                   <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
                 ) : (
