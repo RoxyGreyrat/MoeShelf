@@ -655,11 +655,6 @@ function GameCard({
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
         {nd && <div className="pointer-events-none absolute inset-0 bg-slate-900/40" />}
-        {nd && (
-          <span className="absolute left-2 top-10 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-medium text-white/85 backdrop-blur">
-            未下载
-          </span>
-        )}
         {game.completed === true && (
           <div className="pointer-events-none absolute right-2 top-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/55 shadow-[0_0_12px_rgba(245,197,66,0.35)] ring-1 ring-amber-200/40 backdrop-blur-md">
             <Icon
