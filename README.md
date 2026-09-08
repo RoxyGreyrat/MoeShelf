@@ -1,121 +1,315 @@
 [![Made with DeepSeek V4 Flash](https://img.shields.io/badge/Made%20with-DeepSeek%20V4%20Flash-536DFE?style=flat-square&logo=deepseek&logoColor=white)](https://deepseek.com)
+
 <div align="center">
 
 # Moeshelf
 
-**本地 Galgame 收藏管理一键启动工具**
+**本地 Galgame 收藏管理工具**
 
-当前版本：`v1.6.0`
+自动扫描 · 多源刮削 · 中文信息 · 游玩记录 · 局域网访问
+
+**当前版本：`v1.6.0`**
 
 </div>
 
 ---
 
-## 功能特性
+## 功能
 
-- **本地收藏管理**：自动扫描游戏目录并识别文件夹与可执行文件；智能选择主程序（优先汉化/破解版，自动排除卸载器、安装程序、运行库等无关文件）。
-- **多源自动刮削**：从 **VNDB / Bangumi / YMgal / CnGal / Moyu** 五个数据源自动获取封面、标题、发售日、开发商、评分等元数据；搜索支持相似度校验与全源并行，命中错误可手动修正。
-- **中文体验增强**：优先展示官方/民间中文标题；详情面板自动补全**中文简介**——优先采用 Moyu 多语言简介中的 STORY 剧情正文，CnGal / YMgal / Bangumi 依次兜底。
-- **角色与声优**：从多个来源获取登场角色、配音演员及对应立绘。
-- **封面管理**：在线更换封面；封面与图片经服务端代理 + 本地缓存（`data/cache/images`、浏览器 IndexedDB）加载，离线仍可显示。
-- **收藏与通关**：星标收藏并置顶；「已通关」标记、Fin 角标与按通关时间排序的列表。
-- **数据安全**：游玩时长统计；自动备份（`data/backup`，保留最近 5 份）；一键导出 / 导入（JSON）；导出 CSV。
-- **内容分级**：按 VNDB 封面分级对 R18 封面启用高斯模糊与 NSFW 标记，支持全局或单游戏开关。
-- **会社视角**：按开发商列出「本地未下载」的作品（VNDB 数据），便于规划补全目标；空结果自动重拉，杜绝缓存污染。
-- **网络适配**：内置代理设置（代理失败自动直连重试）；内置「开启局域网访问」脚本，手机同 WiFi 即可访问。
-- **开箱即用**：发布版双击 `启动.bat` 即可运行，自动打开浏览器，支持 PWA/移动端访问。
+### 本地收藏管理
+
+* 自动扫描游戏目录，识别文件夹与可执行文件
+* 智能选择主程序，自动排除安装程序、卸载器、运行库等无关文件
+* 支持收藏、置顶、已通关标记
+* 支持按通关时间查看游戏
+* 自动统计游玩时长
+
+### 多源自动刮削
+
+支持以下数据源：
+
+| 数据源         | 主要内容            |
+| ----------- | --------------- |
+| **VNDB**    | 封面、标题、发售日、评分、会社 |
+| **Bangumi** | 中文标题、简介、角色、声优   |
+| **YMgal**   | 中文标题、简介、角色      |
+| **CnGal**   | 中文标题、简介、角色      |
+| **Moyu**    | 中文名、多语言简介、剧情简介  |
+
+支持全源并行搜索与相似度校验，降低错误匹配概率，也可以手动修正条目。
+
+### 中文体验
+
+* 优先显示中文标题
+* 自动获取中文简介
+* Moyu → CnGal → YMgal → Bangumi 多级简介回退
+* 自动获取角色、声优及角色立绘
+
+### 封面管理
+
+* 在线更换游戏封面
+* 图片经过服务端代理并缓存到本地
+* 支持浏览器 IndexedDB 缓存
+* 缓存后可离线查看
+
+### 内容分级
+
+根据 VNDB 封面分级：
+
+* R18 封面自动启用模糊
+* 显示 NSFW 标记
+* 支持全局开关
+* 支持单个游戏单独设置
+
+### 会社视角
+
+按开发商查看 VNDB 中的其他作品：
+
+> 找出「还没下载」的作品，方便规划收藏补全。
+
+缓存异常时会自动重新获取数据，避免错误缓存影响结果。
+
+### 局域网访问
+
+* 内置代理设置
+* 代理失败后自动尝试直连
+* 一键开启局域网访问
+* 手机与电脑连接同一 Wi-Fi 即可访问
+* 支持 PWA / 移动端
+
+### 数据安全
+
+所有个人数据默认保存在本地：
+
+```text
+data/
+├── backup/      # 自动备份
+├── cache/       # 刮削与图片缓存
+└── ...
+```
+
+支持：
+
+* 自动备份，保留最近 5 份
+* JSON 导入 / 导出
+* CSV 导出
+* 游戏库升级无损迁移
+
+---
 
 ## 快速开始
 
 ### 使用发布版
 
-1. 下载Release；
-2. 双击 **`启动.bat`**，程序会自动启动服务并打开 `http://localhost:3000`；
-3. 首次使用：在「设置」中指定游戏根目录 → 点击「扫描」→ 自动刮削元数据；
-4. 局域网访问：运行 **`开启局域网访问.bat`**，用提示的局域网地址在手机端打开。
+1. 前往 GitHub **Releases** 下载最新版本
+2. 解压后双击 **`启动.bat`**
+3. 浏览器会自动打开：
 
-> 所有本地数据均保存在程序目录下的 `data/` 中，升级时保留该目录即可无损迁移。
-
-### 从源码运行 / 开发
-
-环境要求：**Node.js ≥ 18.17**（建议 20 及以上）。
-
-```bash
-npm install        # 安装依赖
-npm run dev        # 开发模式，http://localhost:3000
-npm run build      # 生产构建（输出 .next/standalone）
-npm start          # 本地生产运行
-node pack.js <目标目录>   # 打包「解压即用」发布目录
+```text
+http://localhost:3000
 ```
 
-`pack.js` 会将 standalone 产物组装为发布目录（`server.js` + `node_modules` + `.next` + 启动脚本 + `data/`），与正式发布包布局一致。
+4. 在「设置」中选择游戏根目录
+5. 点击「扫描」
+6. 等待程序自动刮削游戏信息
 
-## 数据源说明
+### 手机访问
 
-| 来源 | 用途 | 备注 |
-| --- | --- | --- |
-| VNDB | 封面 / 标题 / 发售日 / 评分 / 会社作品 | 主要元数据源 |
-| Bangumi | 中文标题 / 简介 / 角色 | API `bgm.tv` |
-| YMgal | 中文标题 / 简介 / 角色 | OAuth 公开 API |
-| CnGal | 中文标题 / 简介 / 角色 | `api.cngal.org` |
-| Moyu（鲲 Galgame 补丁） | **中文简介优先源** / 中文名 / 多语言简介 | 站方公开 JSON API，见下 |
+电脑与手机连接到同一个 Wi-Fi 后：
 
-> Moyu（[moyu.moe](https://www.moyu.moe)）为开源项目 [KunMoe/kun-galgame-patch](https://github.com/KunMoe/kun-galgame-patch)（AGPL-3.0）运营的社区站点。本项目**仅调用其公开 API 获取文字元数据与简介**，不涉及任何补丁资源下载，亦不包含其代码。
+1. 双击 **`开启局域网访问.bat`**
+2. 根据提示获取局域网地址
+3. 在手机浏览器打开该地址
+
+---
+
+## 从源码运行
+
+### 环境要求
+
+* **Node.js ≥ 18.17**
+* 推荐 **Node.js 20+**
+
+### 安装与运行
+
+```bash
+npm install
+npm run dev
+```
+
+开发服务器默认运行于：
+
+```text
+http://localhost:3000
+```
+
+### 生产构建
+
+```bash
+npm run build
+npm start
+```
+
+### 打包发布版
+
+```bash
+node pack.js <目标目录>
+```
+
+`pack.js` 会自动组装发布目录：
+
+```text
+server.js
+node_modules/
+.next/
+启动脚本
+data/
+```
+
+生成与正式发布版相同结构的「解压即用」目录。
+
+---
+
+## 数据源
+
+Moeshelf **仅获取公开的游戏元数据**，不提供游戏本体、补丁或其他资源。
+
+| 来源          | 用途                 |
+| ----------- | ------------------ |
+| **VNDB**    | 主要元数据、封面、评分、发售日、会社 |
+| **Bangumi** | 中文标题、简介、角色、声优      |
+| **YMgal**   | 中文标题、简介、角色         |
+| **CnGal**   | 中文标题、简介、角色         |
+| **Moyu**    | 中文名、多语言简介、剧情简介     |
+
+Moyu（鲲 Galgame 补丁）是一个开源社区项目。Moeshelf 仅调用其公开 API 获取文字元数据，**不下载或提供补丁资源，也未复制其代码**。
+
+---
 
 ## 数据与隐私
 
-- 本地数据仅保存在本机 `data/`（设置、资料库、刮削缓存、游玩时长、自动备份），**不会上传到任何服务器**；
-- 刮削仅向上述站点发起元数据/简介检索请求，不含你的游戏目录、文件名之外的信息；
+Moeshelf 是一个**本地收藏管理工具**。
 
-## 常见问题（FAQ）
+你的游戏库数据保存在本机：
 
-- **刮削/搜索失败**：检查网络；若配置了代理且代理未开启，程序会自动直连重试（会提示「代理不可用，已尝试直连」）。
-- **中文简介为空或未更新**：早期版本查询为空的结果会被缓存；对条目点击「重新获取信息」，或在设置中清空刮削缓存后重新打开详情。
-- **Moyu 条目提示「未找到对应条目」**：请确认版本为 **1.6.0+**——1.6.0 起所有 Moyu 详情请求均携带 `content_limit=all`，以兼容 R18 条目。
-- **端口被占用**：启动器会自动尝试 3001–3019 端口；全部被占时请关闭占用程序后重试。
-- **被安全软件拦截**：若杀毒软件阻止 `node.exe` 启动，请将程序目录加入信任列表。
-
-## 目录结构
-
-```
-src/
-├── lib/           数据源与刮削逻辑（vndb / bangumi / ymgal / cngal / moyu …）
-├── app/
-│   ├── api/       本地服务接口（library / scan / scrape / search / cn-description …）
-│   └── page.tsx   主界面（React + Tailwind）
-├── …
-pack.js            发布目录打包脚本
+```text
+data/
 ```
 
-## 参考与致谢
+不会将你的游戏库、游玩记录等个人数据上传到 Moeshelf 自有服务器。
 
-本项目站在以下开源项目与社区服务之上，特此致谢。
+刮削时，程序会向上述第三方数据源请求游戏元数据。具体数据处理方式以各数据源自身的服务条款与隐私政策为准。
 
-### 运行时框架与依赖
+---
 
-| 项目 | 用途 | 许可证 |
-| --- | --- | --- |
-| [Next.js](https://github.com/vercel/next.js) | Web 应用框架与路由 | MIT |
-| [React](https://github.com/facebook/react) | 界面组件库 | MIT |
-| [TypeScript](https://github.com/microsoft/TypeScript) | 开发语言 | Apache-2.0 |
-| [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) | 样式方案 | MIT |
-| [undici](https://github.com/nodejs/undici) | HTTP 客户端（代理/超时封装） | MIT |
-| [cheerio](https://github.com/cheeriojs/cheerio) | HTML 解析（部分源） | MIT |
-| [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) | 局域网访问二维码 | MIT |
+## FAQ
 
-### 元数据数据源（通过公开 API 调用，非代码依赖）
+### 刮削失败怎么办？
 
-- [VNDB](https://vndb.org) — 主元数据：封面、发售日、评分、会社作品列表（VNDB API）。
-- [Bangumi](https://bgm.tv)（开源仓库 [bangumi/server](https://github.com/bangumi/server)，AGPL-3.0）— 中文标题、简介、角色与声优（`api.bgm.tv`）；本项目仅调用其公开 API，未复制或链接其代码。
-- [YMgal](https://www.ymgal.games) — 中文标题、简介、角色（开放 API）。
-- [CnGal](https://www.cngal.org)（仓库 [CnGal/CnGalWebSite](https://github.com/CnGal/CnGalWebSite)，MIT）— 中文简介、角色（`api.cngal.org`）。
-- [Moyu · 鲲 Galgame 补丁](https://www.moyu.moe)（[KunMoe/kun-galgame-patch](https://github.com/KunMoe/kun-galgame-patch)，AGPL-3.0）— **中文简介优先源**：多语言简介、中文名等。本项目仅调用其公开 API 获取文字元数据，未复制或链接其代码，其 AGPL 协议不影响本项目自身代码的 MIT 许可。
+检查网络连接。
 
+如果配置了代理，程序会在代理不可用时自动尝试直连，并提示：
+
+> 代理不可用，已尝试直连
+
+### 中文简介没有显示怎么办？
+
+早期版本可能会缓存空结果。
+
+可以尝试：
+
+1. 打开游戏详情
+2. 点击「重新获取信息」
+
+或者在「设置」中清空刮削缓存后重新获取。
+
+### Moyu 提示「未找到对应条目」？
+
+请确认使用 **v1.6.0 或更高版本**。
+
+v1.6.0 起，Moyu 详情请求统一携带 `content_limit=all`，以兼容部分 R18 条目。
+
+### 端口被占用怎么办？
+
+程序会自动尝试：
+
+```text
+3001 → 3019
+```
+
+如果全部被占用，请关闭占用端口的程序后重新启动。
+
+### 被杀毒软件拦截怎么办？
+
+部分安全软件可能会阻止发布版中的 `node.exe` 运行。
+
+如果确认程序来源可信，可以将 Moeshelf 程序目录加入安全软件的信任列表。
+
+---
+
+## 项目结构
+
+```text
+Moeshelf/
+├── src/
+│   ├── lib/              # 数据源与刮削逻辑
+│   │   ├── vndb/
+│   │   ├── bangumi/
+│   │   ├── ymgal/
+│   │   ├── cngal/
+│   │   └── moyu/
+│   │
+│   ├── app/
+│   │   ├── api/          # 本地 API
+│   │   └── page.tsx      # 主界面
+│   │
+│   └── ...
+│
+├── pack.js               # 发布版打包脚本
+├── package.json
+└── README.md
+```
+
+---
+
+## 数据源与开源项目致谢
+
+### 运行时框架
+
+* [Next.js](https://github.com/vercel/next.js) — Web 应用框架
+* [React](https://github.com/facebook/react) — UI 框架
+* [TypeScript](https://github.com/microsoft/TypeScript) — 开发语言
+* [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) — CSS 框架
+* [undici](https://github.com/nodejs/undici) — HTTP 客户端
+* [cheerio](https://github.com/cheeriojs/cheerio) — HTML 解析
+* [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) — 二维码生成
+
+### 数据源
+
+* [VNDB](https://vndb.org)
+* [Bangumi](https://bgm.tv)
+* [YMgal](https://www.ymgal.games)
+* [CnGal](https://www.cngal.org)
+* [Moyu](https://www.moyu.moe)
+
+感谢所有提供公开数据与开源项目的开发者及社区。
+
+---
 
 ## 免责声明
 
-本项目仅提供**本地收藏管理与元数据检索**能力，不提供、不聚合任何盗版游戏或补丁资源本体。游戏与相关素材版权归其权利方所有，请在遵守当地法律与各站点服务条款的前提下使用本工具。
+Moeshelf 仅提供：
+
+> **本地 Galgame 收藏管理 + 元数据检索**
+
+本项目**不提供、不聚合任何游戏本体、盗版资源或补丁资源**。
+
+游戏及相关素材的版权归其权利人所有，请在遵守当地法律及相关服务条款的前提下使用本项目。
+
+---
 
 ## 许可证
 
-本项目基于 **MIT License** 开源，详见 [LICENSE](LICENSE)。
+本项目基于 **MIT License** 开源。
+
+详见 [LICENSE](LICENSE)。
