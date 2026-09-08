@@ -5,7 +5,7 @@ set ERRORCODE=0
 
 echo ============================================
 echo   Moeshelf - one-click GitHub sync
-echo   repo: https://github.com/RoxyGreyrat/Moeshelf
+echo   repo: https://github.com/RoxyGreyrat/MoeShelf
 echo ============================================
 echo.
 
@@ -15,7 +15,7 @@ if errorlevel 1 goto nogit
 REM ---- 1. remote origin ----
 git remote get-url origin >nul 2>&1
 if errorlevel 1 (
-  git remote add origin https://github.com/RoxyGreyrat/Moeshelf.git
+  git remote add origin https://github.com/RoxyGreyrat/MoeShelf.git
   echo [OK] remote origin added.
 )
 
@@ -67,7 +67,7 @@ if /i "%~2"=="tag" (
   echo [OK] tags pushed.
 )
 echo.
-echo Done. View: https://github.com/RoxyGreyrat/Moeshelf
+echo Done. View: https://github.com/RoxyGreyrat/MoeShelf
 goto end
 
 :nogit
