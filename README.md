@@ -16,13 +16,13 @@
 
 当前版本：`v1.6.0`
 
+---
+
 </div>
 
 <p align="center">
   <img src="docs/screenshots/example.png" alt="MoeShelf 主界面" width="900">
 </p>
-
----
 
 
 ---
