@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.4);
+}
+::-moz-selection {
+  background: rgba(99, 102, 241, 0.4);
+}
+:focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.8);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsla(0, 0%, 100%, 0.12);
+  border-radius: 999px;
+  border: 2px solid #0a0b10;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsla(0, 0%, 100%, 0.22);
+}
+
+.grayscale {
+  filter: grayscale(100%);
+}
+.r18-blur {
+  filter: blur(10px);
+  -webkit-filter: blur(10px);
+}
+/* 未下载 + NSFW 同时存在时：灰度 + 模糊叠加（避免 .r18-blur 覆盖掉 .grayscale 的灰度） */
+.grayscale.r18-blur {
+  filter: grayscale(100%) blur(10px);
+  -webkit-filter: grayscale(100%) blur(10px);
+}
+
+/* 原编译产物 CSS 中的自定义动画（非 Tailwind 生成，来自原 globals.css），页面 className 依赖 */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease;
+}
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-scale-in {
+  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-up {
+  animation: slideUp 0.25s ease;
+}

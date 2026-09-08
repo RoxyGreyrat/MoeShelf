@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+*.log
+*.tsbuildinfo
+.DS_Store
+data
+
+*.tsbuildinfo
+
+sync-to-github.bat
+release-to-github.bat
+
+sync-to-github.bat
+release-to-github.bat
