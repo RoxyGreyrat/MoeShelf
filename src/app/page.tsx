@@ -502,14 +502,16 @@ function Header({
     return () => window.removeEventListener('storage', sync)
   }, [])
   const toggleTheme = () => {
-    // 以当前实际 DOM 属性为准切换（多次点击始终交替，不会“卡住”）
-    const next =
-      document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
+    // 切换瞬间禁用全站过渡，避免大量元素同时补间导致卡顿；350ms 后恢复
+    const root = document.documentElement
+    root.classList.add('theme-switch')
+    const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light'
     setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
+    root.setAttribute('data-theme', next)
     try {
       localStorage.setItem('moeshelf-theme', next)
     } catch {}
+    window.setTimeout(() => root.classList.remove('theme-switch'), 350)
   }
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-ink-950/70 backdrop-blur-xl">

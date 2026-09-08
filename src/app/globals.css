@@ -7,6 +7,13 @@
   --gl-bg: #0a0b10;
   color-scheme: dark;
 }
+/* 切换主题的瞬间禁用全站 transition/animation，避免大量元素同时补间导致卡顿 */
+html.theme-switch *,
+html.theme-switch *::before,
+html.theme-switch *::after {
+  transition: none !important;
+  animation: none !important;
+}
 html[data-theme='light'] {
   --gl-bg: #eef0f5;
   color-scheme: light;
@@ -97,6 +104,30 @@ html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
 }
 html[data-theme='light'] ::placeholder {
   color: #8a919f;
+}
+
+/* 亮色：浅色强调文字加深（选中态/标签等，如侧栏与“名称/发售日”排序钮的 indigo-200） */
+html[data-theme='light'] [class*='text-indigo-100'],
+html[data-theme='light'] [class*='text-indigo-200'] {
+  color: #3730a3;
+}
+html[data-theme='light'] [class*='text-indigo-300'],
+html[data-theme='light'] [class*='text-indigo-400'] {
+  color: #4338ca;
+}
+html[data-theme='light'] [class*='text-emerald-300'],
+html[data-theme='light'] [class*='text-emerald-400'] {
+  color: #047857;
+}
+/* 亮色：金/黄色系文字加深（“已通关”、星标等） */
+html[data-theme='light'] [class*='text-amber-200'],
+html[data-theme='light'] [class*='text-amber-300'] {
+  color: #b45309;
+}
+html[data-theme='light'] [class*='text-amber-400'],
+html[data-theme='light'] [class*='text-yellow-300'],
+html[data-theme='light'] [class*='text-yellow-400'] {
+  color: #a16207;
 }
 
 html {
