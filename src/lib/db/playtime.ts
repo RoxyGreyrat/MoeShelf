@@ -1,7 +1,7 @@
 // playtime 表操作。语义与旧 JSON 实现一致：
 // minutes 保留一位小数；lastPlayed 记录最近一次（ISO）；merge 时取较新的时间。
 import type Database from 'better-sqlite3'
-import { getDb, withTransaction } from './index'
+import { getDb, maybeAutoBackupDb, withTransaction } from './index'
 import type { PlaytimeFile, PlaytimeGame } from '../types'
 
 interface PlaytimeRow {
@@ -62,6 +62,7 @@ export async function accumulateGame(
        sessions = playtime.sessions + excluded.sessions,
        last_played = excluded.last_played`
   ).run(hash, round1(minutes), skipSession ? 0 : 1, new Date(playedAt).toISOString())
+  void maybeAutoBackupDb()
 }
 
 /** 修改路径后合并旧/新 hash 的时长（旧值并入新键并删除旧键） */
@@ -89,9 +90,11 @@ export async function migratePlaytimeHash(oldHash: string, newHash: string): Pro
        last_played = excluded.last_played`
   ).run(newHash, minutes, sessions, lastPlayed || null)
   db.prepare('DELETE FROM playtime WHERE game_hash = ?').run(oldHash)
+  void maybeAutoBackupDb()
 }
 
 export async function deletePlaytime(hash: string): Promise<void> {
   const db = await getDb()
   db.prepare('DELETE FROM playtime WHERE game_hash = ?').run(hash)
+  void maybeAutoBackupDb()
 }

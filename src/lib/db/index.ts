@@ -97,11 +97,42 @@ export async function backupDbTo(targetPath: string): Promise<string> {
   return targetPath
 }
 
-/** 应用级事务包装：fn 内使用 db 句柄（同步 SQL 操作） */
+function stamp(d: Date): string {
+  const p = (n: number, w = 2) => String(n).padStart(w, '0')
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+}
+
+let lastAutoBackupAt = 0
+const BACKUP_KEEP = 5
+
+/** 自动备份：写路径调用（60s 去抖），产物 data/backup/moeshelf.YYYYMMDD-HHmmss.db，保留最近 5 份 */
+export async function maybeAutoBackupDb(): Promise<void> {
+  try {
+    const now = Date.now()
+    if (now - lastAutoBackupAt < 60000) return
+    const db = await getDb()
+    const dir = await databaseDir()
+    const bdir = path.join(dir, 'backup')
+    await fsp.mkdir(bdir, { recursive: true })
+    const file = path.join(bdir, `moeshelf.${stamp(new Date())}.db`)
+    await db.backup(file)
+    lastAutoBackupAt = now
+    const files = (await fsp.readdir(bdir)).filter((f) => /^moeshelf\.\d{8}-\d{6}\.db$/.test(f)).sort()
+    for (const old of files.slice(0, Math.max(0, files.length - BACKUP_KEEP))) {
+      await fsp.unlink(path.join(bdir, old)).catch(() => {})
+    }
+  } catch {
+    // 自动备份失败不影响主流程
+  }
+}
+
+/** 应用级事务包装：fn 内使用 db 句柄（同步 SQL 操作），成功后触发自动备份 */
 export async function withTransaction<T>(fn: (db: Database.Database) => T): Promise<T> {
   const db = await getDb()
   const run = db.transaction(fn as unknown as (...args: unknown[]) => T) as () => T
-  return run()
+  const result = run()
+  void maybeAutoBackupDb()
+  return result
 }
 
 /** 供 better-sqlite3 实例化/版本诊断使用 */

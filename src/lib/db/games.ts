@@ -1,6 +1,6 @@
 // games 表操作：保持 LibraryGame 结构与 pathHash 语义。
 import type Database from 'better-sqlite3'
-import { getDb, withTransaction } from './index'
+import { getDb, maybeAutoBackupDb, withTransaction } from './index'
 import type { LibraryGame } from '../types'
 
 interface GameRow {
@@ -116,11 +116,13 @@ export async function replaceAllGames(games: LibraryGame[]): Promise<void> {
 export async function upsertGame(g: LibraryGame): Promise<void> {
   const db = await getDb()
   insert(db, g)
+  void maybeAutoBackupDb()
 }
 
 export async function deleteGameByHash(hash: string): Promise<void> {
   const db = await getDb()
   db.prepare('DELETE FROM games WHERE path_hash = ?').run(hash)
+  void maybeAutoBackupDb()
 }
 
 /** 批量删除（事务） */

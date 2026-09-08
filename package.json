@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "verify:sqlite": "node scripts/verify-sqlite.mjs"
   },
   "dependencies": {
     "@types/qrcode-generator": "^1.0.6",

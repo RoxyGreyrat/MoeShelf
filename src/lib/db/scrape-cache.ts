@@ -2,7 +2,7 @@
 // schema 恒为 CACHE_SCHEMA(2)；ScrapedData 整体 JSON 存 data_json；
 // 新鲜度：成功 90 天 / 失败 3 天，且 scrapedAt 不能在未来。
 import type Database from 'better-sqlite3'
-import { getDb, withTransaction } from './index'
+import { getDb, maybeAutoBackupDb, withTransaction } from './index'
 import type { CacheEntry, CacheFile, ScrapedData } from '../types'
 
 export const CACHE_SCHEMA = 2
@@ -81,6 +81,7 @@ export async function saveCacheEntry(entry: CacheEntry): Promise<void> {
        success = excluded.success,
        data_json = excluded.data_json`
   ).run(entryToRow({ ...entry, schema: CACHE_SCHEMA }))
+  void maybeAutoBackupDb()
 }
 
 /** 全量写回（事务） */
@@ -98,6 +99,7 @@ export async function saveCacheGames(entries: Record<string, CacheEntry>): Promi
 export async function clearCache(): Promise<void> {
   const db = await getDb()
   db.prepare('DELETE FROM scrape_cache').run()
+  void maybeAutoBackupDb()
 }
 
 /** 按键取新鲜缓存数据；无有效数据返回 null */
