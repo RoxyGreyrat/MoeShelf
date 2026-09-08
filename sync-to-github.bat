@@ -57,8 +57,11 @@ if errorlevel 1 goto commitfail
 echo [OK] committed: "%MSG%"
 goto dopush
 
-REM ---- 5. push ----
+REM ---- 5. pull remote changes first, then push ----
 :dopush
+echo [..] syncing with remote (git pull --rebase) ...
+git pull --rebase origin "%BR%"
+if errorlevel 1 goto pullfail
 git push -u origin "%BR%"
 if errorlevel 1 goto pushfail
 echo [OK] pushed to origin/%BR%.
@@ -82,6 +85,19 @@ goto end
 
 :commitfail
 echo [ERROR] git commit failed.
+set ERRORCODE=1
+goto end
+
+:pullfail
+echo.
+echo [WARN] pull --rebase failed, usually a conflict between remote and
+echo        local changes (e.g. you edited the same file on GitHub web).
+echo        Fix it manually:
+echo           cd /d E:\moeshelf-src
+echo           git status          (see conflicted files)
+echo           edit the files, then:
+echo           git add .
+echo           git rebase --continue
 set ERRORCODE=1
 goto end
 
