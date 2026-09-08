@@ -111,11 +111,6 @@ pack.js            发布目录打包脚本
 - [CnGal](https://www.cngal.org)（仓库 [CnGal/CnGalWebSite](https://github.com/CnGal/CnGalWebSite)，MIT）— 中文简介、角色（`api.cngal.org`）。
 - [Moyu · 鲲 Galgame 补丁](https://www.moyu.moe)（[KunMoe/kun-galgame-patch](https://github.com/KunMoe/kun-galgame-patch)，AGPL-3.0）— **中文简介优先源**：多语言简介、中文名等。本项目仅调用其公开 API 获取文字元数据，未复制或链接其代码，其 AGPL 协议不影响本项目自身代码的 MIT 许可。
 
-### 文档格式与设计参考
-
-- 更新日志结构参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；
-- 版本号遵循[语义化版本（SemVer）](https://semver.org/lang/zh-CN/)；
-- 产品形态启发自本地媒体库软件 [Infuse](https://firecore.com/infuse)（商业软件，非开源）。
 
 ## 免责声明
 
