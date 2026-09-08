@@ -42,25 +42,30 @@ export function getDb(): Promise<Database.Database> {
     const dir = await databaseDir()
     if (handle && handleDir === dir) return handle
     if (handle) closeDb()
-    await fsp.mkdir(dir, { recursive: true })
-    const db = new Database(path.join(dir, 'moeshelf.db'))
-    db.pragma('journal_mode = WAL')
-    db.pragma('busy_timeout = 5000')
-    // 先赋值，迁移期间内部各模块 getDb() 复用同一句柄，避免自等 opening
-    handle = db
-    handleDir = dir
+    let db: Database.Database | null = null
     try {
+      await fsp.mkdir(dir, { recursive: true })
+      db = new Database(path.join(dir, 'moeshelf.db'))
+      db.pragma('journal_mode = WAL')
+      db.pragma('busy_timeout = 5000')
+      // 先赋值，迁移期间内部各模块 getDb() 复用同一句柄，避免自等 opening
+      handle = db
+      handleDir = dir
       ensureSchema(db)
       await migrateIfLegacy(db, dir)
     } catch (err) {
-      // 迁移失败：打印原因（供 CI/日志排查），回滚——删除本次创建的不完整库文件
+      // 打开/迁移失败：打印原因（供 CI/日志排查），回滚——删除本次创建的不完整库文件
       try {
-        console.error('[db:migration] failed:', err && (err as Error).message ? (err as Error).message : err)
+        console.error(
+          '[db] open/migrate failed:',
+          err && (err as Error).message ? (err as Error).message : err,
+          err && (err as Error).stack ? '\n' + (err as Error).stack : ''
+        )
       } catch {
         // ignore logging errors
       }
       try {
-        db.close()
+        if (db) db.close()
       } catch {
         // ignore
       }
@@ -76,6 +81,7 @@ export function getDb(): Promise<Database.Database> {
       handleDir = null
       throw err
     }
+    if (!db) throw new Error('database handle unavailable')
     return db
   })()
   return opening.finally(() => {

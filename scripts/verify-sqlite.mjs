@@ -88,6 +88,7 @@ async function startServer(dataDir, port) {
   let log = ''
   child.stdout.on('data', (d) => (log += d))
   child.stderr.on('data', (d) => (log += d))
+  child.moeLog = () => log
   const end = Date.now() + 30000
   let up = false
   while (Date.now() < end) {
@@ -221,6 +222,9 @@ async function main() {
       check('12.JSON 导出保持兼容结构', expOk === true)
       const imp = await httpJson(31902, 'POST', '/api/backup?action=import', exported)
       check('13.JSON 导入成功', imp.ok === true && imp.games === 3)
+      // 打印服务端日志（迁移/DB 错误等），便于 CI 定位
+      const srvLog = s2.moeLog ? s2.moeLog() : ''
+      if (srvLog.trim()) console.log('--- server log (scenario2) ---\n' + srvLog.slice(-2500))
     } finally {
       await stop(s2)
     }
