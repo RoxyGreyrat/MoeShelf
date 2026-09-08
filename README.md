@@ -1,4 +1,5 @@
 [![Made with DeepSeek V4 Flash](https://img.shields.io/badge/Made%20with-DeepSeek%20V4%20Flash-536DFE?style=flat-square&logo=deepseek&logoColor=white)](https://deepseek.com)
+[![Made with ChatGPT](https://img.shields.io/badge/Made%20with-ChatGPT-10A37F?style=flat-square&logo=openai&logoColor=white)](https://chatgpt.com)
 
 
 <div align="center">
@@ -19,15 +20,17 @@
   <img src="docs/screenshots/example.png" alt="Moeshelf 主界面">
 </p>
 
+---
+
 ## 功能
 
 ### 本地收藏管理
 
-* 自动扫描游戏目录，识别文件夹与可执行文件
-* 智能选择主程序，自动排除安装程序、卸载器、运行库等无关文件
-* 支持收藏、置顶、已通关标记
-* 支持按通关时间查看游戏
-* 自动统计游玩时长
+- 自动扫描游戏目录，识别文件夹与可执行文件
+- 智能选择主程序，自动排除安装程序、卸载器、运行库等无关文件
+- 支持收藏、置顶、已通关标记
+- 支持按通关时间查看游戏
+- 自动统计游玩时长
 
 ### 多源自动刮削
 
@@ -45,26 +48,26 @@
 
 ### 中文体验
 
-* 优先显示中文标题
-* 自动获取中文简介
-* Moyu → CnGal → YMgal → Bangumi 多级简介回退
-* 自动获取角色、声优及角色立绘
+- 优先显示中文标题
+- 自动获取中文简介
+- Moyu → CnGal → YMgal → Bangumi 多级简介回退
+- 自动获取角色、声优及角色立绘
 
 ### 封面管理
 
-* 在线更换游戏封面
-* 图片经过服务端代理并缓存到本地
-* 支持浏览器 IndexedDB 缓存
-* 缓存后可离线查看
+- 在线更换游戏封面
+- 图片经过服务端代理并缓存到本地
+- 支持浏览器 IndexedDB 缓存
+- 缓存后可离线查看
 
 ### 内容分级
 
 根据 VNDB 封面分级：
 
-* R18 封面自动启用模糊
-* 显示 NSFW 标记
-* 支持全局开关
-* 支持单个游戏单独设置
+- R18 封面自动启用模糊
+- 显示 NSFW 标记
+- 支持全局开关
+- 支持单个游戏单独设置
 
 ### 会社视角
 
@@ -76,11 +79,11 @@
 
 ### 局域网访问
 
-* 内置代理设置
-* 代理失败后自动尝试直连
-* 一键开启局域网访问
-* 手机与电脑连接同一 Wi-Fi 即可访问
-* 支持 PWA / 移动端
+- 内置代理设置
+- 代理失败后自动尝试直连
+- 一键开启局域网访问
+- 手机与电脑连接同一 Wi-Fi 即可访问
+- 支持 PWA / 移动端
 
 ### 数据安全
 
@@ -95,10 +98,10 @@ data/
 
 支持：
 
-* 自动备份，保留最近 5 份
-* JSON 导入 / 导出
-* CSV 导出
-* 游戏库升级无损迁移
+- 自动备份，保留最近 5 份
+- JSON 导入 / 导出
+- CSV 导出
+- 游戏库升级无损迁移
 
 ---
 
@@ -106,7 +109,7 @@ data/
 
 ### 使用发布版
 
-1. 前往 GitHub **Releases** 下载最新版本
+1. 前往 [Releases](../../releases) 下载最新版本
 2. 解压后双击 **`启动.bat`**
 3. 浏览器会自动打开：
 
@@ -132,8 +135,8 @@ http://localhost:3000
 
 ### 环境要求
 
-* **Node.js ≥ 18.17**
-* 推荐 **Node.js 20+**
+- **Node.js ≥ 18.17**
+- 推荐 **Node.js 20+**
 
 ### 安装与运行
 
@@ -179,13 +182,13 @@ data/
 
 Moeshelf **仅获取公开的游戏元数据**，不提供游戏本体、补丁或其他资源。
 
-| 来源          | 用途                 |
-| ----------- | ------------------ |
-| **VNDB**    | 主要元数据、封面、评分、发售日、会社 |
-| **Bangumi** | 中文标题、简介、角色、声优      |
-| **YMgal**   | 中文标题、简介、角色         |
-| **CnGal**   | 中文标题、简介、角色         |
-| **Moyu**    | 中文名、多语言简介、剧情简介     |
+| 来源 | 主要用途 |
+| --- | --- |
+| **VNDB** | 封面、标题、发售日、评分、会社及作品列表 |
+| **Bangumi** | 中文标题、简介、角色、声优 |
+| **YMgal** | 中文标题、简介、角色 |
+| **CnGal** | 中文标题、简介、角色 |
+| **Moyu** | 中文名、多语言简介、剧情简介 |
 
 Moyu（鲲 Galgame 补丁）是一个开源社区项目。Moeshelf 仅调用其公开 API 获取文字元数据，**不下载或提供补丁资源，也未复制其代码**。
 
@@ -270,6 +273,8 @@ Moeshelf/
 │   │
 │   └── ...
 │
+├── docs/
+│   └── screenshots/      # README 截图
 ├── pack.js               # 发布版打包脚本
 ├── package.json
 └── README.md
@@ -277,25 +282,25 @@ Moeshelf/
 
 ---
 
-## 数据源与开源项目致谢
+## 致谢
 
-### 运行时框架
+### 运行时框架与依赖
 
-* [Next.js](https://github.com/vercel/next.js) — Web 应用框架
-* [React](https://github.com/facebook/react) — UI 框架
-* [TypeScript](https://github.com/microsoft/TypeScript) — 开发语言
-* [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) — CSS 框架
-* [undici](https://github.com/nodejs/undici) — HTTP 客户端
-* [cheerio](https://github.com/cheeriojs/cheerio) — HTML 解析
-* [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) — 二维码生成
+- [Next.js](https://github.com/vercel/next.js) — Web 应用框架
+- [React](https://github.com/facebook/react) — UI 框架
+- [TypeScript](https://github.com/microsoft/TypeScript) — 开发语言
+- [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) — CSS 框架
+- [undici](https://github.com/nodejs/undici) — HTTP 客户端
+- [cheerio](https://github.com/cheeriojs/cheerio) — HTML 解析
+- [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) — 二维码生成
 
 ### 数据源
 
-* [VNDB](https://vndb.org)
-* [Bangumi](https://bgm.tv)
-* [YMgal](https://www.ymgal.games)
-* [CnGal](https://www.cngal.org)
-* [Moyu](https://www.moyu.moe)
+- [VNDB](https://vndb.org)
+- [Bangumi](https://bgm.tv)
+- [YMgal](https://www.ymgal.games)
+- [CnGal](https://www.cngal.org)
+- [Moyu](https://www.moyu.moe)
 
 感谢所有提供公开数据与开源项目的开发者及社区。
 
