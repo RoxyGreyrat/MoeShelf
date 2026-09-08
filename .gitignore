@@ -7,3 +7,9 @@ out
 data
 
 *.tsbuildinfo
+
+sync-to-github.bat
+release-to-github.bat
+
+sync-to-github.bat
+release-to-github.bat
