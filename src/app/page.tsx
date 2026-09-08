@@ -1338,7 +1338,7 @@ function GameDetailModal({
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col md:flex-row">
             <div className="relative hidden md:block md:w-72 md:shrink-0">
-              <div className="absolute inset-0 overflow-hidden md:rounded-l-2xl">
+              <div className="aspect-[3/4] w-full overflow-hidden md:rounded-l-2xl">
                 {coverUrl ? (
                   <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
                 ) : (
@@ -3757,7 +3757,9 @@ export default function Page() {
           break
         }
       }
-      const term = dev0 || name
+      // 优先用当前公司桶名查询（含用户手动指定的厂商名），
+      // 避免“把 ATRI 手动归到 FrontWing 后，未下载列表仍按刮削的枕社拉取”。
+      const term = name
       let resp = await fetch(
         `/api/scrape?company=${encodeURIComponent(term)}&name=${encodeURIComponent(name)}&vndbIds=${vids.join(',')}${
           force ? '&force=1' : ''
@@ -3767,6 +3769,20 @@ export default function Page() {
       if (json && json.ok && json.cached && !force && (!json.games || !json.games.length)) {
         resp = await fetch(
           `/api/scrape?company=${encodeURIComponent(term)}&name=${encodeURIComponent(name)}&vndbIds=${vids.join(',')}&force=1`,
+        )
+        json = await resp.json().catch(() => null)
+      }
+      // 桶名在 VNDB 上查不到时，回退到本地刮削记录里的开发商标记
+      if (
+        json &&
+        json.ok &&
+        Array.isArray(json.games) &&
+        json.games.length === 0 &&
+        dev0 &&
+        dev0 !== name
+      ) {
+        resp = await fetch(
+          `/api/scrape?company=${encodeURIComponent(dev0)}&name=${encodeURIComponent(name)}&vndbIds=${vids.join(',')}&force=1`,
         )
         json = await resp.json().catch(() => null)
       }
