@@ -794,7 +794,7 @@ function GameCard({
           ) : (
             <span className="inline-flex min-w-0 items-center gap-1">
               {duration ? (
-                <span className="inline-flex shrink-0 items-center gap-1 align-middle text-white/40">
+                <span className="inline-flex shrink-0 items-center gap-1 align-middle font-semibold text-emerald-300 [text-shadow:0_0_6px_rgba(52,211,153,0.55)]">
                   <ClockIcon className="h-3 w-3 shrink-0" />
                   {duration}
                 </span>
@@ -1316,7 +1316,7 @@ function GameDetailModal({
         </span>
       )}
       {duration && (
-        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-1 text-emerald-300">
+        <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-300 [text-shadow:0_0_7px_rgba(52,211,153,0.6)]">
           <ClockIcon className="h-3.5 w-3.5 shrink-0" />
           <span>{duration}</span>
           {v.playSessions ? <span> · {v.playSessions}次</span> : null}
