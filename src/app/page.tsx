@@ -494,12 +494,14 @@ function Header({
     <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-ink-950/70 backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-indigo-600 shadow-lg shadow-emerald-500/20">
-            <Icon name="play" className="h-5 w-5 fill-white text-white" />
-          </div>
+          <img
+            src="/icon.png"
+            alt="MoeShelf"
+            className="h-10 w-10 rounded-xl object-cover shadow-lg shadow-emerald-500/20"
+          />
           <div className="leading-tight">
             <h1 className="bg-gradient-to-r from-white via-white to-white/60 bg-clip-text text-lg font-bold text-transparent">
-              Moeshelf
+              MoeShelf
             </h1>
             <p className="text-[11px] text-white/40">本地 · 私密 · 自动</p>
           </div>
