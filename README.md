@@ -15,6 +15,10 @@
 
 ---
 
+<p align="center">
+  <img src="docs/screenshots/example.png" alt="Moeshelf 主界面">
+</p>
+
 ## 功能
 
 ### 本地收藏管理
