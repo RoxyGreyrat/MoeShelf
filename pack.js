@@ -1,12 +1,12 @@
 // 打包脚本：把 next build 的 standalone 产物组装成"解压即用"的发布目录。
 // 用法：node pack.js <目标目录> [--with-data]
-// 布局与 E:\galgame-library-build-1.4.2 一致：根目录 = server.js + node_modules + .next + 启动脚本 + data。
+// 布局：根目录 = server.js + node_modules + .next + 启动脚本 + data。
 const fs = require('fs')
 const path = require('path')
 
 const root = __dirname
 const version = require('./package.json').version
-const target = path.resolve(process.argv[2] || path.join(root, '..', 'galgame-library-build-' + version))
+const target = path.resolve(process.argv[2] || path.join(root, '..', 'moeshelf-build-' + version))
 const withData = process.argv.includes('--with-data')
 
 function copyDir(src, dst) {
@@ -46,7 +46,7 @@ fs.rmSync(nextDir, { recursive: true, force: true })
 copyDir(path.join(root, '.next'), nextDir)
 
 // 3. 启动脚本与文档
-for (const f of ['launcher.js', '启动.bat', '开启局域网访问.bat', 'README.md', '更新日志.md']) {
+for (const f of ['launcher.js', '启动.bat', '开启局域网访问.bat', 'README.md', '更新日志.md', 'LICENSE']) {
   const s = path.join(root, f)
   if (fs.existsSync(s)) fs.copyFileSync(s, path.join(target, f))
 }

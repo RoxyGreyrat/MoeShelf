@@ -2423,7 +2423,7 @@ function SettingsModal({
       const cd = resp.headers.get('content-disposition') ?? ''
       const m = cd.match(/filename="?([^";]+)"?/)
       a.href = url
-      a.download = m ? m[1] : `galgame-library-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.download = m ? m[1] : `moeshelf-backup-${new Date().toISOString().slice(0, 10)}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -2468,7 +2468,7 @@ function SettingsModal({
         path: g.folderPath || '',
       }))
       const csv = buildCsv(rows)
-      downloadCsv(`galgame-library-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+      downloadCsv(`moeshelf-${new Date().toISOString().slice(0, 10)}.csv`, csv)
       push(`已导出 ${rows.length} 个游戏到 CSV`, 'success')
     } catch (e) {
       push('导出 CSV 失败', 'error')

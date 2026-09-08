@@ -1,6 +1,6 @@
 <div align="center">
 
-# Galgame Library
+# Moeshelf
 
 **本地 Galgame 收藏管理、自动刮削与一键启动工具**
 
@@ -30,7 +30,7 @@
 
 ### 使用发布版
 
-1. 解压发布包（如 `galgame-library-build-1.6.0.zip`）；
+1. 解压发布包（如 `moeshelf-build-1.6.0.zip`）；
 2. 双击 **`启动.bat`**，程序会自动启动服务并打开 `http://localhost:3000`；
 3. 首次使用：在「设置」中指定游戏根目录 → 点击「扫描」→ 自动刮削元数据；
 4. 局域网访问：运行 **`开启局域网访问.bat`**，用提示的局域网地址在手机端打开。
@@ -95,4 +95,4 @@ pack.js            发布目录打包脚本
 
 ## 许可证
 
-仓库当前**未附带 LICENSE 文件**。若计划公开托管与分发，请先为项目补充合适的开源许可证（如 MIT / GPL-3.0 / AGPL-3.0）后再发布。
+本项目基于 **MIT License** 开源，详见 [LICENSE](LICENSE)。

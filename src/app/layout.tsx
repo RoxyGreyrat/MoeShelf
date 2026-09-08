@@ -3,7 +3,7 @@ import { ToastProvider } from '@/components/toast'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Galgame 图书馆',
+  title: 'Moeshelf · Galgame 收藏库',
   description:
     '像 Infuse 管理本地视频一样，管理你的本地 Galgame 收藏，自动刮削封面与元数据',
   manifest: '/manifest.webmanifest',

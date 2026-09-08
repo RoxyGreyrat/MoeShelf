@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(JSON.stringify(payload, null, 2), {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="galgame-library-backup-${dateStamp(new Date())}.json"`,
+        'Content-Disposition': `attachment; filename="moeshelf-backup-${dateStamp(new Date())}.json"`,
       },
     })
   } catch (e) {
