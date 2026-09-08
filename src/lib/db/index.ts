@@ -81,6 +81,7 @@ export function getDb(): Promise<Database.Database> {
       handleDir = null
       throw err
     }
+    installShutdownHandlers()
     if (!db) throw new Error('database handle unavailable')
     return db
   })()
@@ -98,6 +99,18 @@ export function closeDb(): void {
   }
   handle = null
   handleDir = null
+}
+
+// 进程收尾时主动关闭句柄，避免 Node/V8 退出清理阶段因原生句柄未关产生
+// “Assertion failed: (env) != nullptr” 崩溃（next-server + better-sqlite3 场景）
+let shutdownInstalled = false
+function installShutdownHandlers(): void {
+  if (shutdownInstalled) return
+  shutdownInstalled = true
+  const onExit = () => closeDb()
+  process.once('exit', onExit)
+  process.once('SIGINT', onExit)
+  process.once('SIGTERM', onExit)
 }
 
 /** 一致性备份当前库到目标（better-sqlite3 backup API），返回目标路径 */
