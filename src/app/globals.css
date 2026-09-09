@@ -94,6 +94,21 @@ html[data-theme='light'] [class*='from-white'][class*='bg-clip-text'] {
   -webkit-text-fill-color: #232833 !important;
 }
 
+/* 自定义滚动条（SmoothScroll 效果由 page.tsx 注入）：原生滚动条隐藏 + 指示条淡入淡出 */
+.ms-noscroll {
+  scrollbar-width: none;
+}
+.ms-noscroll::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+.ms-bar {
+  background-color: rgba(255, 255, 255, 0.32);
+}
+html[data-theme='light'] .ms-bar {
+  background-color: rgba(15, 23, 42, 0.3);
+}
+
 /* 亮色滚动条：同样静止隐藏、滚动淡入 */
 html[data-theme='light'].ms-scrolling ::-webkit-scrollbar-thumb {
   background: rgba(15, 23, 42, 0.3);

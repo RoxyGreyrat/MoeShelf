@@ -1357,7 +1357,7 @@ function GameDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
+      <div className="relative flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
         <button
           onClick={() => setManageOpen(v => !v)}
           aria-label="设置"
@@ -1376,7 +1376,7 @@ function GameDetailModal({
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col md:flex-row">
             <div className="relative hidden md:flex md:w-72 md:shrink-0 md:flex-col">
-              <div className="relative w-full overflow-hidden bg-ink-800 md:rounded-tl-2xl">
+              <div className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden bg-ink-800 md:rounded-tl-2xl">
                 {coverUrl && (
                   <CoverImage url={coverUrl} alt="" className="scale-110 opacity-60 blur-2xl" />
                 )}
@@ -1572,7 +1572,7 @@ function GameDetailModal({
                     </span>
                   )}
                 </h3>
-                <div className="h-[38vh] grow overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
+                <div className="min-h-[8rem] flex-1 overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
                   {description ? (
                     <p className="whitespace-pre-line text-sm leading-relaxed text-white/65">{description}</p>
                   ) : (
@@ -3659,7 +3659,83 @@ function SidebarItem({
 export default function Page() {
   const lib = useLibrary()
   const { push } = useToast()
-  // 滚动时给根元素加标记（配合 globals.css 让滚动条滚动时出现、静止后淡出）
+  // 自定义滚动条：原生 ::-webkit-scrollbar 不支持 transition，这里隐藏原生条并在每个滚动容器里注入可淡入淡出的指示条
+  useEffect(() => {
+    const holders = new WeakMap<HTMLElement, HTMLDivElement>()
+    const timers = new WeakMap<HTMLElement, number>()
+
+    const update = (el: HTMLElement, bar: HTMLDivElement) => {
+      const { scrollHeight, clientHeight, scrollTop } = el
+      if (scrollHeight <= clientHeight + 1) {
+        bar.style.opacity = '0'
+        return
+      }
+      const h = Math.max(28, (clientHeight / scrollHeight) * clientHeight)
+      const top = (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - h)
+      bar.style.height = h + 'px'
+      bar.style.top = top + 'px'
+    }
+
+    const refreshers = new WeakMap<HTMLElement, () => void>()
+
+    const attach = (el: HTMLElement) => {
+      const existing = holders.get(el)
+      if (existing && existing.isConnected) return
+      if (!/auto|scroll/.test(getComputedStyle(el).overflowY)) return
+      el.classList.add('ms-noscroll')
+      const holder = document.createElement('div')
+      holder.setAttribute('aria-hidden', 'true')
+      holder.style.cssText = 'position:sticky;top:0;height:0;z-index:20;pointer-events:none'
+      const bar = document.createElement('div')
+      bar.className = 'ms-bar'
+      bar.style.cssText = 'position:absolute;right:0;width:6px;border-radius:999px;opacity:0;transition:opacity 0.3s ease-out'
+      holder.appendChild(bar)
+      el.insertBefore(holder, el.firstChild)
+      holders.set(el, holder)
+      refreshers.set(el, () => update(el, bar))
+      update(el, bar)
+      el.addEventListener(
+        'scroll',
+        () => {
+          update(el, bar)
+          bar.style.opacity = '1'
+          const t = timers.get(el)
+          if (t) window.clearTimeout(t)
+          timers.set(el, window.setTimeout(() => { bar.style.opacity = '0' }, 900))
+        },
+        { passive: true },
+      )
+      const ro = new ResizeObserver(() => update(el, bar))
+      ro.observe(el)
+    }
+
+    const scan = () => {
+      document
+        .querySelectorAll<HTMLElement>('[class*="overflow-y-auto"], [class*="overflow-auto"], [class*="overflow-y-scroll"]')
+        .forEach(el => {
+          const refresh = refreshers.get(el)
+          if (refresh && holders.get(el)?.isConnected) refresh()
+          else attach(el)
+        })
+    }
+
+    let scheduled = false
+    const schedule = () => {
+      if (scheduled) return
+      scheduled = true
+      requestAnimationFrame(() => {
+        scheduled = false
+        scan()
+      })
+    }
+
+    scan()
+    const mo = new MutationObserver(schedule)
+    mo.observe(document.body, { childList: true, subtree: true })
+    return () => mo.disconnect()
+  }, [])
+
+  // 滚动时给根元素加标记（原生滚动条场景下滚动时出现、静止后淡出）
   useEffect(() => {
     let timer: number | undefined
     const onScroll = () => {
