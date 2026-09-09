@@ -12,6 +12,8 @@ import {
 } from '@/lib/core'
 import { scanRoot } from '@/lib/scan'
 import type { CacheEntry, LibraryGame } from '@/lib/types'
+// 副作用导入：页面首次加载时恢复未结算的游玩会话（服务重启后继续计时）
+import '@/lib/playtime-tracker'
 
 export async function GET() {
   let games = await loadLibrary()

@@ -347,6 +347,16 @@ export function accumulatePlaytime(
   return accumulateGame(hash, minutes, playedAt, skipSession)
 }
 
+/**
+ * 结算一次已结束的游玩会话：无条件写入时长（可为 0）并 sessions +1。
+ * 用于进程退出时的收尾——即使最后一段增量已被定时累计写过（增量为 0），
+ * 也必须把这次会话记上一次。
+ */
+export function finalizePlaytime(hash: string, minutes: number, playedAt: number): Promise<void> {
+  if (!hash) return Promise.resolve()
+  return accumulateGame(hash, minutes > 0 ? minutes : 0, playedAt, false)
+}
+
 // ============ 模块 644：pathHash / 缓存键 ============
 /** 由字符串计算 8 位 hex hash（djb2：seed 5381，hash=(hash<<5)+hash+charCode） */
 export function pathHashOf(p: string): string {
