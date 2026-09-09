@@ -94,13 +94,13 @@ html[data-theme='light'] [class*='from-white'][class*='bg-clip-text'] {
   -webkit-text-fill-color: #232833 !important;
 }
 
-/* 亮色滚动条 */
-html[data-theme='light'] ::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.25);
+/* 亮色滚动条：同样静止隐藏、滚动淡入 */
+html[data-theme='light'].ms-scrolling ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.3);
   border-color: var(--gl-bg);
 }
-html[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 23, 42, 0.38);
+html[data-theme='light'].ms-scrolling ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.45);
 }
 html[data-theme='light'] ::placeholder {
   color: #8a919f;
@@ -153,13 +153,19 @@ html {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+/* 静止时不显示滚动条，滚动时淡入（滚动期间由 page.tsx 给 <html> 加 .ms-scrolling） */
 ::-webkit-scrollbar-thumb {
-  background: hsla(0, 0%, 100%, 0.12);
+  background: transparent;
   border-radius: 999px;
-  border: 2px solid #0a0b10;
+  border: 2px solid transparent;
+  transition: background-color 0.25s ease;
 }
-::-webkit-scrollbar-thumb:hover {
+html.ms-scrolling ::-webkit-scrollbar-thumb {
   background: hsla(0, 0%, 100%, 0.22);
+  border-color: #0a0b10;
+}
+html.ms-scrolling ::-webkit-scrollbar-thumb:hover {
+  background: hsla(0, 0%, 100%, 0.38);
 }
 
 .grayscale {

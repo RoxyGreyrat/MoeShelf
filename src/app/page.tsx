@@ -1563,7 +1563,7 @@ function GameDetailModal({
                   </div>
                 )}
               </div>
-              <div className="flex shrink-0 flex-col">
+              <div className="flex min-h-0 flex-1 flex-col">
                 <h3 className="mb-1 flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-white/35">
                   简介
                   {metadata?.cnDescription && (
@@ -1572,7 +1572,7 @@ function GameDetailModal({
                     </span>
                   )}
                 </h3>
-                <div className="h-40 shrink-0 overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
+                <div className="h-[38vh] grow overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
                   {description ? (
                     <p className="whitespace-pre-line text-sm leading-relaxed text-white/65">{description}</p>
                   ) : (
@@ -1581,7 +1581,7 @@ function GameDetailModal({
                 </div>
               </div>
               {(charLoading || (characters && characters.length > 0) || charLoaded) && (
-                <div className="min-h-0 shrink-0">
+                <div className="mt-auto min-h-0 shrink-0">
                   <div className="mb-1.5 flex items-center gap-2">
                     <h3 className="text-[11px] font-medium uppercase tracking-wider text-white/35">主要角色</h3>
                     {charLoading && <Spinner className="h-3 w-3" />}
@@ -3659,6 +3659,22 @@ function SidebarItem({
 export default function Page() {
   const lib = useLibrary()
   const { push } = useToast()
+  // 滚动时给根元素加标记（配合 globals.css 让滚动条滚动时出现、静止后淡出）
+  useEffect(() => {
+    let timer: number | undefined
+    const onScroll = () => {
+      const root = document.documentElement
+      if (!root.classList.contains('ms-scrolling')) root.classList.add('ms-scrolling')
+      if (timer) window.clearTimeout(timer)
+      timer = window.setTimeout(() => root.classList.remove('ms-scrolling'), 900)
+    }
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true })
+    return () => {
+      document.removeEventListener('scroll', onScroll, { capture: true })
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [])
+
   // 单游戏 NSFW 模糊开关：nsfwOff 集合中的游戏即使 NSFW 也不模糊（localStorage 持久化）
   const [nsfwOff, setNsfwOff] = useState<Set<string>>(() => {
     try {
