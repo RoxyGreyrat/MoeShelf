@@ -968,8 +968,8 @@ function GameDetailModal({
   const [rescrapeBusy, setRescrapeBusy] = useState(false)
   const [launchBusy, setLaunchBusy] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
-  const [manageTab, setManageTab] = useState<'appearance' | 'program' | 'char'>('appearance')
-  const [section, setSection] = useState<string | null>(null)
+  // 设置弹窗：不再分目录，所有项默认展开，点标题可折叠
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [searchSource, setSearchSource] = useState('all')
   const [fixQuery, setFixQuery] = useState('')
   const [fixCandidates, setFixCandidates] = useState<SearchCandidate[] | null>(null)
@@ -1123,6 +1123,18 @@ function GameDetailModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.pathHash, game?.metadata])
 
+  // 设置弹窗默认全部展开：打开时预填搜索框与路径
+  useEffect(() => {
+    if (!manageOpen) return
+    const folder = game?.folderName ?? ''
+    if (folder) {
+      setFixQuery(q => (q.trim() ? q : folder))
+      setCharQuery(q => (q.trim() ? q : folder))
+    }
+    const folderPath = game?.folderPath ?? ''
+    setPathInp(prev => (prev.trim() ? prev : folderPath))
+  }, [manageOpen, game?.pathHash, game?.folderName, game?.folderPath])
+
   if (!v) return null
 
   const doRescrape = async () => {
@@ -1146,11 +1158,19 @@ function GameDetailModal({
   }
 
   const toggleSection = (key: string) => {
-    setSection(section === key ? null : key)
+    const willExpand = collapsed.has(key)
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+    if (!willExpand) return
     if (key === 'title') setTitleInput(displayTitle(v))
     if (key === 'fix' && !fixQuery.trim()) setFixQuery(v.folderName)
     if (key === 'dev') setDevInput(devName(v) ?? '')
     if (key === 'char' && !charQuery.trim()) setCharQuery(v.folderName)
+    if (key === 'path') setPathInp(v.folderPath ?? '')
   }
 
   const runFixSearch = async (query: string) => {
@@ -1187,7 +1207,6 @@ function GameDetailModal({
     setApplyingId(c.id)
     try {
       await onManualMatch(v, c.source, c.id)
-      setSection(null)
     } finally {
       setApplyingId(null)
     }
@@ -1211,7 +1230,6 @@ function GameDetailModal({
 
   const pickCover = async (url: string | null) => {
     await handleSetCover(v, url)
-    setSection(null)
   }
 
   const applyCoverUrl = async () => {
@@ -1223,7 +1241,6 @@ function GameDetailModal({
     setCoverError(null)
     await handleSetCover(v, url)
     setCoverUrlInput('')
-    setSection(null)
   }
 
   const saveTitle = async () => {
@@ -1231,7 +1248,6 @@ function GameDetailModal({
       setTitleBusy(true)
       try {
         await handleSetTitle(v, titleInput)
-        setSection(null)
       } finally {
         setTitleBusy(false)
       }
@@ -1243,7 +1259,6 @@ function GameDetailModal({
       setDevBusy(true)
       try {
         await handleSetDev(v, devInput)
-        setSection(null)
       } finally {
         setDevBusy(false)
       }
@@ -1272,7 +1287,6 @@ function GameDetailModal({
   const pickExe = async (path: string) => {
     await onSetExe(v, path)
     setExeAck(false) // 与原编译产物一致：此处重置 ack 状态后收起面板
-    setSection(null)
   }
 
   const fetchCharacters = async () => {
@@ -1346,8 +1360,8 @@ function GameDetailModal({
       <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
         <button
           onClick={() => setManageOpen(v => !v)}
-          aria-label="管理（设置）"
-          title="管理（设置）"
+          aria-label="设置"
+          title="设置"
           className="absolute right-12 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/70 backdrop-blur transition hover:bg-black/70 hover:text-white"
         >
           <Icon name="settings" className="h-4 w-4" />
@@ -1359,10 +1373,10 @@ function GameDetailModal({
         >
           <Icon name="x" className="h-4 w-4" />
         </button>
-        <div className="min-h-0 overflow-y-auto">
-          <div className="flex flex-col md:flex-row">
-            <div className="relative hidden md:block md:w-72 md:shrink-0">
-              <div className="relative w-full overflow-hidden bg-ink-800 md:rounded-l-2xl">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+            <div className="relative hidden md:flex md:w-72 md:shrink-0 md:flex-col">
+              <div className="relative w-full overflow-hidden bg-ink-800 md:rounded-tl-2xl">
                 {coverUrl && (
                   <CoverImage url={coverUrl} alt="" className="scale-110 opacity-60 blur-2xl" />
                 )}
@@ -1409,6 +1423,31 @@ function GameDetailModal({
                     <Spinner className="h-6 w-6" />
                   </div>
                 )}
+              </div>
+              {/* 封面下方信息：评分一行；厂商 + 发售日一行（圆角标签，不同颜色区分） */}
+              <div className="shrink-0 space-y-1.5 border-t border-white/[0.07] bg-white/[0.02] px-3 py-2.5 md:rounded-bl-2xl">
+                {ratingDisplay && (
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="rounded-lg bg-amber-400/10 px-2 py-1 text-[11px] text-amber-300">
+                      ★ {ratingDisplay}
+                      {metadata?.votecount ? `（${metadata.votecount.toLocaleString()}票）` : ''}
+                    </span>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {dev && (
+                    <span
+                      className="max-w-full truncate rounded-lg bg-indigo-500/10 px-2 py-1 text-[11px] text-indigo-300"
+                      title={metadata?.developers?.length ? `刮削到：${metadata.developers.join(' / ')}` : undefined}
+                    >
+                      {dev}
+                      {v.customDeveloper ? '（手动）' : ''}
+                    </span>
+                  )}
+                  <span className="rounded-lg bg-white/[0.06] px-2 py-1 text-[11px] text-white/70">
+                    发售 {formatRelease(metadata?.released)}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="flex gap-3 p-4 pb-0 md:hidden">
@@ -1514,10 +1553,18 @@ function GameDetailModal({
                 {metadata?.originalTitle && metadata.originalTitle !== title && (
                   <p className="mt-0.5 text-xs text-white/40">{metadata.originalTitle}</p>
                 )}
-                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">{infoChips}</div>
+                {duration && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-1 font-semibold text-emerald-300 [text-shadow:0_0_7px_rgba(52,211,153,0.6)]">
+                      <ClockIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span>{duration}</span>
+                      {v.playSessions ? <span> · {v.playSessions}次</span> : null}
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="min-h-0 flex-1">
-                <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-white/35">
+              <div className="flex shrink-0 flex-col">
+                <h3 className="mb-1 flex shrink-0 items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-white/35">
                   简介
                   {metadata?.cnDescription && (
                     <span className="rounded bg-emerald-500/15 px-1 py-0.5 text-[9px] font-normal normal-case text-emerald-300">
@@ -1525,11 +1572,9 @@ function GameDetailModal({
                     </span>
                   )}
                 </h3>
-                <div className="h-full overflow-y-auto pr-1">
+                <div className="h-40 shrink-0 overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2">
                   {description ? (
-                    <p className="whitespace-pre-line text-sm leading-relaxed text-white/65">
-                      {description.length > 1200 ? description.slice(0, 1200) + '……' : description}
-                    </p>
+                    <p className="whitespace-pre-line text-sm leading-relaxed text-white/65">{description}</p>
                   ) : (
                     <p className="text-sm text-white/30">暂无简介</p>
                   )}
@@ -1565,7 +1610,7 @@ function GameDetailModal({
                     </div>
                   ) : (
                     <p className="py-1 text-xs text-white/30">
-                      未找到角色与声优数据（可在下方「管理 → 角色/声优」手动从指定数据源获取）
+                      未找到角色与声优数据（可在右上角「设置 → 角色 /声优」手动从指定数据源获取）
                     </p>
                   )}
                 </div>
@@ -1579,7 +1624,7 @@ function GameDetailModal({
             <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setManageOpen(false)} />
             <div className="relative flex max-h-[86vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] px-4 py-3">
-                <h3 className="text-sm font-semibold text-white/85">管理（设置）</h3>
+                <h3 className="text-sm font-semibold text-white/85">设置</h3>
                 <div className="flex items-center gap-2">
                   {!nd && (
                     <button
@@ -1610,7 +1655,7 @@ function GameDetailModal({
                   )}
                   <button
                     onClick={() => setManageOpen(false)}
-                    aria-label="关闭管理"
+                    aria-label="关闭设置"
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.07] text-white/70 transition hover:bg-white/[0.12] hover:text-white"
                   >
                     <Icon name="x" className="h-4 w-4" />
@@ -1618,48 +1663,24 @@ function GameDetailModal({
                 </div>
               </div>
               <div className="flex min-h-0 flex-1">
-                <nav className="w-44 shrink-0 space-y-1 border-r border-white/[0.06] p-2">
-                  {(
-                    [
-                      ['appearance', '外观与信息', 'book'],
-                      ['program', '条目与程序', 'settings'],
-                      ['char', '角色与声优', 'info'],
-                    ] as const
-                  ).map(([key, label, icon]) => (
-                    <button
-                      key={key}
-                      onClick={() => setManageTab(key)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition ${
-                        manageTab === key
-                          ? 'bg-indigo-500/15 text-indigo-200'
-                          : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
-                      }`}
-                    >
-                      <Icon name={icon} className="h-3.5 w-3.5 shrink-0" />
-                      {label}
-                    </button>
-                  ))}
-                </nav>
                 <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                  <div className="grid gap-2.5 sm:grid-cols-2">
-                <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] px-3 py-2 text-xs text-white/60 sm:col-span-2">
-                  在此修改标题 / 封面 / 条目 / 启动程序 / 厂商 / 路径，或管理角色与声优；改动即时保存。
+                  <div className="grid gap-2.5 md:grid-cols-2">
+                <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] px-3 py-2 text-xs text-white/60 md:col-span-2">
+                  所有修改即时保存。
                 </div>
-                {manageTab === 'appearance' && (
-                  <>
               <div>
                 <SectionRow
-                  active={section === 'title'}
+                  active={!collapsed.has('title')}
                   icon="book"
                   label="修改标题"
                   desc={v.customTitle ? '已自定义' : '官方中文标题优先'}
                   onClick={() => toggleSection('title')}
                 />
-                {section === 'title' && (
+                {!collapsed.has('title') && (
                   <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
                     <div className="flex gap-1.5">
                       <input
-                        value={titleInput ?? ''}
+                        value={titleInput ?? displayTitle(v)}
                         onChange={e => setTitleInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && !titleBusy && void saveTitle()}
                         placeholder="显示标题（优先级高于官方中文标题）"
@@ -1687,13 +1708,13 @@ function GameDetailModal({
               </div>
               <div>
                 <SectionRow
-                  active={section === 'cover'}
+                  active={!collapsed.has('cover')}
                   icon="folder"
                   label="更换封面"
                   desc="自选 VNDB 封面或粘贴链接"
                   onClick={() => toggleSection('cover')}
                 />
-                {section === 'cover' && (
+                {!collapsed.has('cover') && (
                   <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
                     {coverLoading ? (
                       <div className="flex items-center justify-center gap-2 py-3 text-xs text-white/40">
@@ -1766,20 +1787,16 @@ function GameDetailModal({
                   </div>
                 )}
               </div>
-                  </>
-                )}
-                {manageTab === 'program' && (
-                  <>
               {!nd && (
                 <div>
                   <SectionRow
-                    active={section === 'fix'}
+                    active={!collapsed.has('fix')}
                     icon="search"
                     label="修正条目"
                     desc="匹配错误时从五个数据源重选"
                     onClick={() => toggleSection('fix')}
                   />
-                  {section === 'fix' && (
+                  {!collapsed.has('fix') && (
                     <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <select
@@ -1871,7 +1888,7 @@ function GameDetailModal({
               {!nd && (
                 <div>
                   <SectionRow
-                    active={section === 'exe'}
+                    active={!collapsed.has('exe')}
                     icon="play"
                     label="启动程序"
                     desc={
@@ -1883,7 +1900,7 @@ function GameDetailModal({
                     }
                     onClick={() => toggleSection('exe')}
                   />
-                  {section === 'exe' && (
+                  {!collapsed.has('exe') && (
                     <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
                       {v.folderPath ? (
                         exeLoading ? (
@@ -1929,7 +1946,7 @@ function GameDetailModal({
               )}
               <div>
                 <SectionRow
-                  active={section === 'dev'}
+                  active={!collapsed.has('dev')}
                   icon="gamepad"
                   label="厂商 /制作组"
                   desc={
@@ -1939,11 +1956,11 @@ function GameDetailModal({
                   }
                   onClick={() => toggleSection('dev')}
                 />
-                {section === 'dev' && (
+                {!collapsed.has('dev') && (
                   <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
                     <div className="flex gap-1.5">
                       <input
-                        value={devInput ?? ''}
+                        value={devInput ?? devName(v) ?? ''}
                         onChange={e => setDevInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && !devBusy && void saveDev()}
                         placeholder="例如：柚子社 / Key / TYPE-MOON"
@@ -1974,7 +1991,7 @@ function GameDetailModal({
               {!nd && (
                 <div>
                   <SectionRow
-                    active={section === 'path'}
+                    active={!collapsed.has('path')}
                     icon="folder"
                     label="修改路径"
                     desc="游戏文件夹被移动或改名后，重新定位"
@@ -1983,7 +2000,7 @@ function GameDetailModal({
                       toggleSection('path')
                     }}
                   />
-                  {section === 'path' && (
+                  {!collapsed.has('path') && (
                     <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
                       <div className="flex gap-1.5">
                         <input
@@ -2005,14 +2022,10 @@ function GameDetailModal({
                   )}
                 </div>
               )}
-                  </>
-                )}
-                {manageTab === 'char' && (
-                  <>
               {!nd && (
                 <div>
                   <SectionRow
-                    active={section === 'char'}
+                    active={!collapsed.has('char')}
                     icon="info"
                     label="角色 /声优"
                     desc={
@@ -2022,7 +2035,7 @@ function GameDetailModal({
                     }
                     onClick={() => toggleSection('char')}
                   />
-                  {section === 'char' && (
+                  {!collapsed.has('char') && (
                     <div className="mt-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <select
@@ -2059,8 +2072,6 @@ function GameDetailModal({
                   )}
                 </div>
               )}
-                  </>
-                )}
             </div>
           </div>
         </div>
