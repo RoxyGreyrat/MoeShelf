@@ -968,6 +968,7 @@ function GameDetailModal({
   const [rescrapeBusy, setRescrapeBusy] = useState(false)
   const [launchBusy, setLaunchBusy] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
+  const [manageTab, setManageTab] = useState<'appearance' | 'program' | 'char'>('appearance')
   const [section, setSection] = useState<string | null>(null)
   const [searchSource, setSearchSource] = useState('all')
   const [fixQuery, setFixQuery] = useState('')
@@ -1359,7 +1360,7 @@ function GameDetailModal({
           <Icon name="x" className="h-4 w-4" />
         </button>
         <div className="min-h-0 overflow-y-auto">
-          <div className="flex flex-col md:flex-row md:items-start">
+          <div className="flex flex-col md:flex-row">
             <div className="relative hidden md:block md:w-72 md:shrink-0">
               <div className="relative w-full overflow-hidden bg-ink-800 md:rounded-l-2xl">
                 {coverUrl && (
@@ -1480,7 +1481,7 @@ function GameDetailModal({
                 <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">{infoChips}</div>
               </div>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:p-5">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 p-4 sm:p-5">
               <div className="hidden md:block">
                 <div className="flex items-start gap-2">
                   <h2 className="text-xl font-bold leading-snug text-white">{title}</h2>
@@ -1515,7 +1516,7 @@ function GameDetailModal({
                 )}
                 <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">{infoChips}</div>
               </div>
-              <div className="min-h-0">
+              <div className="min-h-0 flex-1">
                 <h3 className="mb-1 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-white/35">
                   简介
                   {metadata?.cnDescription && (
@@ -1524,7 +1525,7 @@ function GameDetailModal({
                     </span>
                   )}
                 </h3>
-                <div className="max-h-44 overflow-y-auto pr-1">
+                <div className="h-full overflow-y-auto pr-1">
                   {description ? (
                     <p className="whitespace-pre-line text-sm leading-relaxed text-white/65">
                       {description.length > 1200 ? description.slice(0, 1200) + '……' : description}
@@ -1535,7 +1536,7 @@ function GameDetailModal({
                 </div>
               </div>
               {(charLoading || (characters && characters.length > 0) || charLoaded) && (
-                <div className="min-h-0">
+                <div className="mt-auto min-h-0 shrink-0">
                   <div className="mb-1.5 flex items-center gap-2">
                     <h3 className="text-[11px] font-medium uppercase tracking-wider text-white/35">主要角色</h3>
                     {charLoading && <Spinner className="h-3 w-3" />}
@@ -1616,14 +1617,36 @@ function GameDetailModal({
                   </button>
                 </div>
               </div>
-              <div className="grid min-h-0 flex-1 gap-2.5 overflow-y-auto p-4 sm:grid-cols-2">
+              <div className="flex min-h-0 flex-1">
+                <nav className="w-44 shrink-0 space-y-1 border-r border-white/[0.06] p-2">
+                  {(
+                    [
+                      ['appearance', '外观与信息', 'book'],
+                      ['program', '条目与程序', 'settings'],
+                      ['char', '角色与声优', 'info'],
+                    ] as const
+                  ).map(([key, label, icon]) => (
+                    <button
+                      key={key}
+                      onClick={() => setManageTab(key)}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition ${
+                        manageTab === key
+                          ? 'bg-indigo-500/15 text-indigo-200'
+                          : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
+                      }`}
+                    >
+                      <Icon name={icon} className="h-3.5 w-3.5 shrink-0" />
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                  <div className="grid gap-2.5 sm:grid-cols-2">
                 <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] px-3 py-2 text-xs text-white/60 sm:col-span-2">
                   在此修改标题 / 封面 / 条目 / 启动程序 / 厂商 / 路径，或管理角色与声优；改动即时保存。
                 </div>
-                <div className="mt-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35 sm:col-span-2">
-                  <Icon name="book" className="h-3.5 w-3.5" />
-                  外观与信息
-                </div>
+                {manageTab === 'appearance' && (
+                  <>
               <div>
                 <SectionRow
                   active={section === 'title'}
@@ -1743,10 +1766,10 @@ function GameDetailModal({
                   </div>
                 )}
               </div>
-              <div className="mt-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35 sm:col-span-2">
-                <Icon name="settings" className="h-3.5 w-3.5" />
-                条目、程序与厂商
-              </div>
+                  </>
+                )}
+                {manageTab === 'program' && (
+                  <>
               {!nd && (
                 <div>
                   <SectionRow
@@ -1982,10 +2005,10 @@ function GameDetailModal({
                   )}
                 </div>
               )}
-              <div className="mt-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35 sm:col-span-2">
-                <Icon name="info" className="h-3.5 w-3.5" />
-                角色与声优
-              </div>
+                  </>
+                )}
+                {manageTab === 'char' && (
+                  <>
               {!nd && (
                 <div>
                   <SectionRow
@@ -2036,7 +2059,11 @@ function GameDetailModal({
                   )}
                 </div>
               )}
+                  </>
+                )}
             </div>
+          </div>
+        </div>
           </div>
         </div>
         )}
