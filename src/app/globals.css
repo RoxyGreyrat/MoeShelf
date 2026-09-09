@@ -71,18 +71,18 @@ html[data-theme='light'] [class*='text-white/10'] {
   color: #737b8b;
 }
 
-/* 亮色：彩色/渐变按钮与黑底浮层上的文字仍用白色 */
+/* 亮色：彩色/渐变按钮与黑底浮层上的文字仍用白色（只匹配实心彩色底，避免误伤浅色浮层文字） */
 html[data-theme='light'] [class*='from-indigo'][class*='text-white'],
 html[data-theme='light'] [class*='from-emerald'][class*='text-white'],
 html[data-theme='light'] [class*='from-fuchsia'][class*='text-white'],
 html[data-theme='light'] [class*='to-indigo'][class*='text-white'],
 html[data-theme='light'] [class*='to-emerald'][class*='text-white'],
-html[data-theme='light'] [class*='bg-indigo-'][class*='text-white'],
-html[data-theme='light'] [class*='bg-emerald-'][class*='text-white'],
-html[data-theme='light'] [class*='bg-rose-'][class*='text-white'],
-html[data-theme='light'] [class*='bg-fuchsia-'][class*='text-white'],
-html[data-theme='light'] [class*='bg-amber-'][class*='text-white'],
-html[data-theme='light'] [class*='bg-red-'][class*='text-white'],
+html[data-theme='light'] [class*='bg-indigo-500/9'][class*='text-white'],
+html[data-theme='light'] [class*='bg-emerald-500/9'][class*='text-white'],
+html[data-theme='light'] [class*='bg-rose-500/9'][class*='text-white'],
+html[data-theme='light'] [class*='bg-fuchsia-500/9'][class*='text-white'],
+html[data-theme='light'] [class*='bg-amber-500/9'][class*='text-white'],
+html[data-theme='light'] [class*='bg-red-500/9'][class*='text-white'],
 html[data-theme='light'] [class*='bg-black/'][class*='text-white'] {
   color: #ffffff;
 }

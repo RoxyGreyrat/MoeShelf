@@ -397,7 +397,18 @@ function CoverPlaceholder({ name, className = '' }: { name: string; className?: 
   )
 }
 
-function CoverImage({ url, alt, className = '' }: { url: string; alt?: string; className?: string }) {
+function CoverImage({
+  url,
+  alt,
+  className = '',
+  fit = 'cover',
+}: {
+  url: string
+  alt?: string
+  className?: string
+  /** cover：填满容器（可能裁切）；natural：按图片原始比例完整显示（不裁切、不留空） */
+  fit?: 'cover' | 'natural'
+}) {
   const [state, setState] = useState(0) // 0=经服务端代理 1=直连 2=失败 3=IndexedDB 缓存
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
 
@@ -422,7 +433,7 @@ function CoverImage({ url, alt, className = '' }: { url: string; alt?: string; c
     state === 3 ? blobUrl : state === 0 ? `/api/image?url=${encodeURIComponent(url)}` : state === 1 ? url : null
 
   return (
-    <div className="absolute inset-0">
+    <div className={fit === 'natural' ? 'relative w-full' : 'absolute inset-0'}>
       {src && (
         <img
           key={state}
@@ -449,7 +460,11 @@ function CoverImage({ url, alt, className = '' }: { url: string; alt?: string; c
                 .catch(() => setState(2))
             else if (state === 3) setState(2)
           }}
-          className={`h-full w-full object-cover ${className}`}
+          className={
+            fit === 'natural'
+              ? `block h-auto w-full ${className}`
+              : `h-full w-full object-cover ${className}`
+          }
         />
       )}
       {state === 2 && (
@@ -1346,9 +1361,9 @@ function GameDetailModal({
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col md:flex-row">
             <div className="relative hidden md:block md:w-72 md:shrink-0">
-              <div className="aspect-[3/4] w-full overflow-hidden md:rounded-l-2xl">
+              <div className="relative w-full overflow-hidden bg-ink-800 md:rounded-l-2xl">
                 {coverUrl ? (
-                  <CoverImage url={coverUrl} alt={title} className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
+                  <CoverImage url={coverUrl} alt={title} fit="natural" className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
                 ) : (
                   <CoverPlaceholder name={title} />
                 )}
@@ -1551,66 +1566,7 @@ function GameDetailModal({
                   )}
                 </div>
               )}
-              <div
-                className={
-                  nd
-                    ? 'rounded-xl border border-white/10 bg-white/[0.04] p-3'
-                    : 'rounded-xl border border-emerald-400/15 bg-emerald-500/[0.06] p-3'
-                }
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* [FIX] 任务二(b)：未下载时图标提高可见度（text-white/70）且不使用 fill-current */}
-                  <Icon
-                    name={nd ? 'download' : 'play'}
-                    className={`h-3.5 w-3.5 shrink-0 ${nd ? 'text-white/70' : 'text-emerald-300'}`}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-xs text-white/75">
-                    {nd ? '该游戏尚未下载到本地' : exeFileName ?? '未找到可启动的 exe'}
-                  </span>
-                  {!nd && exeCandidates.length > 1 && (
-                    <span className="text-[10px] text-white/35">
-                      有 {exeCandidates.length} 个启动程序，可在「管理 → 启动程序」切换
-                    </span>
-                  )}
-                  <button
-                    onClick={() => void doLaunch()}
-                    disabled={launchBusy || !currentExe || nd}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 disabled:opacity-50"
-                  >
-                    {launchBusy ? (
-                      <>
-                        <Spinner className="h-3 w-3" /> 启动中…
-                      </>
-                    ) : nd ? (
-                      '未下载'
-                    ) : (
-                      '启动'
-                    )}
-                  </button>
-                  <button
-                    onClick={() => void onOpenFolder(v)}
-                    disabled={!v.folderPath}
-                    title="打开所在文件夹"
-                    className={`flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.06] text-white/60 transition hover:bg-white/[0.1] hover:text-white disabled:opacity-40${nd ? ' hidden' : ''}`}
-                  >
-                    <Icon name="folder" className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {!currentExe && !nd && (
-                  <p className="mt-1.5 text-[10px] text-amber-300/70">
-                    未找到 exe：打开「管理 → 启动程序」手动选择，或先重新扫描
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-white/[0.06] pt-3">
-                <span className="text-[10px] text-white/25">
-                  {nd
-                    ? `VNDB #${metadata?.vndbId || ''}`
-                    : metadata?.scrapedAt
-                      ? `信息获取于 ${new Date(metadata.scrapedAt).toLocaleString('zh-CN')}`
-                      : `文件夹名：${v.folderName}`}
-                </span>
-              </div>
+
             </div>
           </div>
         </div>
