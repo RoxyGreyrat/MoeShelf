@@ -1358,12 +1358,15 @@ function GameDetailModal({
         >
           <Icon name="x" className="h-4 w-4" />
         </button>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="flex flex-col md:flex-row">
+        <div className="min-h-0 overflow-y-auto">
+          <div className="flex flex-col md:flex-row md:items-start">
             <div className="relative hidden md:block md:w-72 md:shrink-0">
               <div className="relative w-full overflow-hidden bg-ink-800 md:rounded-l-2xl">
+                {coverUrl && (
+                  <CoverImage url={coverUrl} alt="" className="scale-110 opacity-60 blur-2xl" />
+                )}
                 {coverUrl ? (
-                  <CoverImage url={coverUrl} alt={title} fit="natural" className={`${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
+                  <CoverImage url={coverUrl} alt={title} fit="natural" className={`relative ${nd ? 'grayscale' : ''}${n18 ? ' r18-blur' : ''}`} />
                 ) : (
                   <CoverPlaceholder name={title} />
                 )}
@@ -1573,7 +1576,7 @@ function GameDetailModal({
         {manageOpen && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4">
             <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setManageOpen(false)} />
-            <div className="relative flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
+            <div className="relative flex max-h-[86vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] px-4 py-3">
                 <h3 className="text-sm font-semibold text-white/85">管理（设置）</h3>
                 <div className="flex items-center gap-2">
@@ -1613,9 +1616,13 @@ function GameDetailModal({
                   </button>
                 </div>
               </div>
-              <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto p-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] px-3 py-2 text-xs text-white/55 sm:col-span-2">
+              <div className="grid min-h-0 flex-1 gap-2.5 overflow-y-auto p-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] px-3 py-2 text-xs text-white/60 sm:col-span-2">
                   在此修改标题 / 封面 / 条目 / 启动程序 / 厂商 / 路径，或管理角色与声优；改动即时保存。
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35 sm:col-span-2">
+                  <Icon name="book" className="h-3.5 w-3.5" />
+                  外观与信息
                 </div>
               <div>
                 <SectionRow
@@ -1735,6 +1742,10 @@ function GameDetailModal({
                     </div>
                   </div>
                 )}
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35 sm:col-span-2">
+                <Icon name="settings" className="h-3.5 w-3.5" />
+                条目、程序与厂商
               </div>
               {!nd && (
                 <div>
@@ -1971,6 +1982,10 @@ function GameDetailModal({
                   )}
                 </div>
               )}
+              <div className="mt-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/35 sm:col-span-2">
+                <Icon name="info" className="h-3.5 w-3.5" />
+                角色与声优
+              </div>
               {!nd && (
                 <div>
                   <SectionRow
