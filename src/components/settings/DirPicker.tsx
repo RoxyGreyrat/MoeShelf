@@ -10,10 +10,13 @@ export function DirPicker({
   open,
   onClose,
   onSelect,
+  title = '选择游戏根目录',
 }: {
   open: boolean
   onClose: () => void
   onSelect: (path: string) => void
+  /** 弹窗标题（选数据目录时传「选择数据存储位置」） */
+  title?: string
 }) {
   const [drives, setDrives] = useState<string[]>([])
   const [current, setCurrent] = useState<string | null>(null)
@@ -75,57 +78,54 @@ export function DirPicker({
   }
 
   return (
-    <div className="fixed inset-0 z-[55] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[55] flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-2xl animate-scale-in">
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
-          <h2 className="text-[0.9375rem] font-bold text-white">选择游戏根目录</h2>
-          <button
-            onClick={onClose}
-            aria-label="关闭"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-white/60 transition hover:bg-white/[0.06] hover:text-white"
-          >
+      <div className="relative flex max-h-[82vh] w-full max-w-lg flex-col overflow-hidden radius-2xl border border-strong bg-surface-1 shadow-token-lg animate-scale-in">
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-3">
+          <h2 className="text-[1rem] font-semibold text-primary">{title}</h2>
+          <button onClick={onClose} aria-label="关闭" className="icon-btn ml-auto h-8 w-8 shrink-0 radius-pill">
             <Icon name="x" className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
+
+        <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5">
           <input
             value={pathInput}
             onChange={e => setPathInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && jump()}
             placeholder="输入或粘贴路径，回车跳转"
-            className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[0.8125rem] text-white placeholder:text-white/25 focus:border-indigo-400/50 focus:outline-none"
+            className="field h-9 min-w-0 flex-1 px-2.5"
           />
-          <button
-            onClick={jump}
-            className="btn btn-sm btn-primary shrink-0"
-          >
+          <button onClick={jump} className="btn btn-sm btn-primary shrink-0">
             跳转
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
           {error && (
-            <div className="m-2 rounded-lg border border-red-400/25 bg-red-500/10 px-3 py-2 text-[0.8125rem] text-danger">
+            <div className="m-2 radius-md border border-danger-soft bg-danger-soft px-3 py-2 text-[0.8125rem] text-danger">
               {error}
             </div>
           )}
+
           {!current && (
             <div className="p-2">
-              <p className="mb-2 px-1 text-[0.6875rem] text-white/40">磁盘</p>
+              <p className="mb-2 px-1 section-label">磁盘</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {drives.map(d => (
                   <button
                     key={d}
                     onClick={() => void navigate(d)}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left text-[0.9375rem] text-white/80 transition hover:border-indigo-400/40 hover:bg-white/[0.06]"
+                    className="flex items-center gap-2 radius-lg border border-hairline bg-sunken px-3 py-2.5 text-left text-[0.9375rem] text-primary transition hover:border-accent-soft hover:bg-hoverable"
                   >
-                    <Icon name="drive" className="h-4 w-4 shrink-0 text-indigo-300" />
+                    <Icon name="drive" className="h-4 w-4 shrink-0 text-accent" />
                     {d}
                   </button>
                 ))}
               </div>
             </div>
           )}
+
           {current && (
             <div className="p-1">
               <div className="mb-1.5 flex items-center gap-1.5 px-1">
@@ -133,29 +133,29 @@ export function DirPicker({
                   <button
                     onClick={() => void navigate(parent)}
                     title="上一级"
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-white/70 transition hover:bg-white/[0.1]"
+                    className="icon-btn h-7 w-7 shrink-0 bg-sunken"
                   >
                     <Icon name="up" className="h-4 w-4" />
                   </button>
                 )}
-                <span className="min-w-0 flex-1 truncate text-[0.6875rem] text-white/40" title={current}>
+                <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-tertiary" title={current}>
                   {current}
                 </span>
                 <span className="shrink-0 text-[0.75rem] text-quaternary">{fileCount} 个文件</span>
               </div>
               {loading ? (
-                <div className="flex items-center justify-center gap-2 py-8 text-white/40">
+                <div className="flex items-center justify-center gap-2 py-8 text-tertiary">
                   <Spinner className="h-4 w-4" /> 加载中…
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
                   {dirs.map(d => (
                     <button
                       key={d.path}
                       onClick={() => void navigate(d.path)}
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[0.8125rem] text-white/75 transition hover:bg-white/[0.06]"
+                      className="flex items-center gap-2 radius-sm px-2.5 py-2 text-left text-[0.875rem] text-secondary transition hover:bg-hoverable hover:text-primary"
                     >
-                      <Icon name="folder" className="h-3.5 w-3.5 shrink-0 text-indigo-300/80" />
+                      <Icon name="folder" className="h-3.5 w-3.5 shrink-0 text-quaternary" />
                       <span className="truncate">{d.name}</span>
                     </button>
                   ))}
@@ -169,17 +169,15 @@ export function DirPicker({
             </div>
           )}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-white/[0.06] px-4 py-3">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-white/10 px-3.5 py-1.5 text-[0.8125rem] font-medium text-white/70 transition hover:bg-white/[0.06]"
-          >
+
+        <div className="flex items-center justify-end gap-2 border-t border-hairline px-4 py-3">
+          <button onClick={onClose} className="btn btn-sm btn-soft">
             取消
           </button>
           <button
             onClick={() => current && onSelect(current)}
             disabled={!current || loading}
-            className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-3.5 py-1.5 text-[0.8125rem] font-semibold text-white transition hover:from-emerald-400 hover:to-emerald-500 disabled:opacity-50"
+            className="btn btn-sm btn-success"
           >
             选择此目录
           </button>

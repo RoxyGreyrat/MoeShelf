@@ -886,7 +886,7 @@ export function GameDetailModal({
                               <button
                                 key={i}
                                 onClick={() => void pickCover(c.url)}
-                                className={`relative aspect-[3/4] overflow-hidden rounded-lg bg-ink-800 transition ${
+                                className={`relative aspect-[3/4] overflow-hidden radius-sm bg-surface-3 transition ${
                                   current ? 'ring-2 ring-emerald-400' : 'hover:ring-1 hover:ring-white/30'
                                 }`}
                                 title={`${c.released ?? ''} ${c.relTitle ?? ''}`}
@@ -989,9 +989,9 @@ export function GameDetailModal({
                           {fixAllResults.map(g =>
                             g.candidates.length === 0 ? null : (
                               <div key={g.source}>
-                                <p className="mb-1 flex items-center gap-1.5 text-[0.625rem] font-medium text-white/40">
+                                <p className="mb-1 flex items-center gap-1.5 text-[0.75rem] font-medium text-tertiary">
                                   {SOURCE_LABELS[g.source]}
-                                  <span className="text-white/25">({g.candidates.length})</span>
+                                  <span className="text-quaternary">({g.candidates.length})</span>
                                 </p>
                                 <div className="space-y-1.5">
                                   {g.candidates.map(c => (
@@ -1070,8 +1070,8 @@ export function GameDetailModal({
                               <button
                                 key={e.path}
                                 onClick={() => void pickExe(e.path)}
-                                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[0.8125rem] transition hover:bg-emerald-500/10 ${
-                                  currentExe === e.path ? 'bg-success-soft text-success' : 'text-white/70'
+                                className={`flex w-full items-center gap-2 radius-sm px-2 py-1.5 text-left text-[0.8125rem] transition hover:bg-hoverable ${
+                                  currentExe === e.path ? 'bg-success-soft text-success' : 'text-secondary'
                                 }`}
                               >
                                 <Icon name="play" className="h-3 w-3 shrink-0" />

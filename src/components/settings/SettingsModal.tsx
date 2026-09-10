@@ -615,6 +615,7 @@ export function SettingsModal({
       </div>
       <DirPicker
         open={pickerTarget !== null}
+        title={pickerTarget === 'data' ? '选择数据存储位置' : '选择游戏根目录'}
         onClose={() => setPickerTarget(null)}
         onSelect={path => {
           setPickerTarget(null)
