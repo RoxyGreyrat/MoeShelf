@@ -1402,27 +1402,7 @@ function LeftRail({
 
   return (
     <div className="panel p-2">
-      {/* 概览 */}
-      <div className="mb-1 grid grid-cols-3 gap-1 radius-md bg-sunken p-2">
-        <div className="text-center">
-          <p className="text-[0.9375rem] font-semibold leading-none tabular-nums text-primary">{games.length}</p>
-          <p className="mt-1 text-[0.6875rem] text-quaternary">收藏</p>
-        </div>
-        <div className="border-x border-hairline text-center">
-          <p className="text-[0.9375rem] font-semibold leading-none tabular-nums text-warn">
-            {completedGames.length}
-          </p>
-          <p className="mt-1 text-[0.6875rem] text-quaternary">通关</p>
-        </div>
-        <div className="text-center">
-          <p className="text-[0.9375rem] font-semibold leading-none tabular-nums text-primary">
-            {formatDurationCompact(totalMinutes)}
-          </p>
-          <p className="mt-1 text-[0.6875rem] text-quaternary">时长</p>
-        </div>
-      </div>
-
-      <div className="mt-1.5 space-y-0.5">
+      <div className="space-y-0.5">
         <SidebarItem
           id="all"
           name="全部游戏"
