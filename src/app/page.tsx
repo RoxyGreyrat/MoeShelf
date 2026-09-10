@@ -2158,7 +2158,9 @@ export default function Page() {
                 : 'lg:[grid-template-columns:var(--rail-w)_minmax(0,1fr)] xl:[grid-template-columns:var(--rail-w)_minmax(0,1fr)_var(--aside-w)]'
             }`}
           >
-            <aside className="hidden lg:sticky lg:top-[calc(var(--header-h)+0.75rem)] lg:block lg:max-h-[calc(100vh-var(--header-h)-1.5rem)] lg:self-start lg:overflow-y-auto overscroll-contain">
+            {/* 吸顶线取「顶栏高度 + 1px 边框」：与侧栏在页面里的自然位置对齐，
+                滚动时不会先跟着移动几像素再钉住（此前用 0.75rem，缩放后会有约 8px 位移） */}
+            <aside className="hidden lg:sticky lg:top-[calc(var(--header-h)+1px)] lg:block lg:max-h-[calc(100vh-var(--header-h)-0.5rem)] lg:self-start lg:overflow-y-auto overscroll-contain">
               <LeftRail
                 games={lib.games}
                 companies={companies}
@@ -2430,7 +2432,7 @@ export default function Page() {
                 </div>
               )}
             </section>
-            <aside className="hidden xl:sticky xl:top-[calc(var(--header-h)+0.75rem)] xl:block xl:max-h-[calc(100vh-var(--header-h)-1.5rem)] xl:self-start xl:overflow-y-auto overscroll-contain">
+            <aside className="hidden xl:sticky xl:top-[calc(var(--header-h)+1px)] xl:block xl:max-h-[calc(100vh-var(--header-h)-0.5rem)] xl:self-start xl:overflow-y-auto overscroll-contain">
               <div className="space-y-3">
                 {/* 统计摘要：三个数字一行，替掉原来「三块盒子叠起来」的松散结构 */}
                 <div className="panel overflow-hidden">
