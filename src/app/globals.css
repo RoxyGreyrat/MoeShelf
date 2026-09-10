@@ -47,6 +47,11 @@
   --success-soft: rgba(16, 185, 129, 0.16);
   --success-text: #6ee7b7;
 
+  /* 金色（成就 / 已通关角标）：压在封面之上，不随亮暗主题变化 */
+  --gold-hi: #ffe9a0;
+  --gold: #f0b429;
+  --gold-deep: #b97a08;
+
   --warn: #f59e0b;
   --warn-soft: rgba(245, 158, 11, 0.14);
   --warn-text: #fcd34d;
@@ -246,6 +251,21 @@ html {
   .border-accent-soft { border-color: var(--accent-line); }
   .bg-hairline { background-color: var(--line-3); }
   .bg-strong-line { background-color: var(--line-1); }
+
+  /* --- 卡片裁剪 ---
+     overflow: hidden 的裁剪边界是 padding box，卡片那 1px 描边永远盖不住，
+     悬停换成强调色描边时会在「已通关」角标外侧切出一道亮线。
+     改用 overflow: clip 并把裁剪边界外扩 1px，角标就能压住描边。
+     不支持 overflow: clip 的浏览器退回 hidden（角标少压 1px 描边，其余不变）。 */
+  .card-clip {
+    overflow: hidden;
+  }
+  @supports (overflow: clip) {
+    .card-clip {
+      overflow: clip;
+      overflow-clip-margin: 1px;
+    }
+  }
 
   /* --- 圆角 / 阴影 --- */
   .radius-sm { border-radius: var(--radius-sm); }

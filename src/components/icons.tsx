@@ -220,3 +220,40 @@ export function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
     />
   )
 }
+
+/**
+ * 「已通关」角标：贴在卡片封面右上角的折角缎带（金色，无内嵌图标）。
+ *
+ * 设计稿见 design/badge-preview.html 的方案 C —— 选择折角缎带而不是对勾圆点，是因为
+ * 左上角收藏星也是暖金色圆点，两个同色同形的小圆在同一张封面上会互相干扰；改成顺着
+ * 卡片 14px 圆角的对角缎带后，形状和位置都拉开区分（原来的琥珀色对勾徽标已移除）。
+ *
+ * 两个和版式强相关的约束，改动前请先看：
+ * 1) 它必须是卡片（.card-clip 那层）的直接子元素，不能放回封面容器里：封面自己
+ *    overflow:hidden，角标会被裁在 padding box 上，压不住卡片那 1px 描边；
+ * 2) 外层用 -right-px / -top-px 顶到卡片外沿，配合 .card-clip 的
+ *    overflow-clip-margin: 1px 才能盖住描边——悬停时描边会变成强调色，不盖住就会
+ *    在金色外侧切出一道亮线（这就是之前的 bug）。自带 radius-lg 是为了让角标的
+ *    圆角与卡片 14px 圆角对齐。
+ *
+ * 尺寸按卡片宽度百分比缩放（27%），配合 aspect-square 保持 45° 斜边，
+ * 因此在「紧凑 / 舒适 / 大图」三档密度下比例一致。
+ * 颜色用 --gold* 令牌，压在封面上，暗色主题亮色主题表现相同。
+ */
+export function CompletedRibbon({ className = '-right-px -top-px w-[27%]' }: { className?: string }) {
+  return (
+    <div
+      className={`pointer-events-none absolute z-[2] aspect-square overflow-hidden radius-lg drop-shadow-[-1px_2px_5px_rgba(0,0,0,0.5)] ${className}`}
+    >
+      <div
+        className="h-full w-full"
+        style={{
+          clipPath: 'polygon(100% 0, 100% 81.25%, 26.5625% 0)',
+          backgroundImage:
+            'linear-gradient(135deg, var(--gold-hi) 0%, var(--gold) 62%, var(--gold-deep) 100%)',
+        }}
+      />
+      <span className="sr-only">已通关</span>
+    </div>
+  )
+}

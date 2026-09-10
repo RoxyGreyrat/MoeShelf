@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import QRCode from 'qrcode-generator'
-import { Icon, Spinner } from '@/components/icons'
+import { CompletedRibbon, Icon, Spinner } from '@/components/icons'
 import { useToast } from '@/components/toast'
 import { ClockIcon, CoverImage, CoverPlaceholder } from '@/components/ui/primitives'
 import { GameDetailModal } from '@/components/detail/GameDetailModal'
@@ -198,11 +198,13 @@ function GameCard({
       role="button"
       tabIndex={0}
       onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && onOpen()}
-      className={`group relative flex cursor-pointer flex-col overflow-hidden radius-lg border bg-surface-1 transition-all duration-[var(--dur)] hover:-translate-y-1 hover:shadow-token-md ${
+      className={`group relative flex cursor-pointer flex-col card-clip radius-lg border bg-surface-1 transition-all duration-[var(--dur)] hover:-translate-y-1 hover:shadow-token-md ${
         nd ? 'border-dashed border-strong' : 'border-hairline hover:border-accent-soft'
       }`}
     >
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface-3">
+      {/* 封面自带内圆角 = 卡片圆角 - 1px 描边：配合 .card-clip 的外扩裁剪，
+          保证封面仍只裁到原来的位置，不会因为外扩而啃掉卡片描边 */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface-3 rounded-t-[calc(var(--radius-lg)_-_1px)]">
         {coverUrl ? (
           <CoverImage
             url={coverUrl}
@@ -214,15 +216,6 @@ function GameCard({
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
         {nd && <div className="pointer-events-none absolute inset-0 bg-slate-900/35" />}
-        {game.completed === true && (
-          <div className="pointer-events-none absolute right-2 top-2 z-[2] flex h-7 w-7 items-center justify-center radius-pill bg-overlay shadow-[0_0_14px_rgba(245,197,66,0.3)] ring-1 ring-amber-200/45 backdrop-blur-md">
-            <Icon
-              name="check"
-              className="h-3.5 w-3.5 text-amber-300"
-              strokeWidth={3}
-            />
-          </div>
-        )}
         <button
           title={isFav ? '取消收藏' : '收藏'}
           aria-label={isFav ? '取消收藏' : '收藏'}
@@ -366,6 +359,8 @@ function GameCard({
           )}
         </div>
       </div>
+      {/* 已通关角标：必须是卡片（.card-clip）的直接子元素，理由见 CompletedRibbon 注释 */}
+      {game.completed === true && <CompletedRibbon />}
       <div className="flex flex-1 flex-col gap-1 px-[var(--card-pad)] pb-2.5 pt-2.5">
         <h3
           className="text-[length:var(--card-title)] font-semibold leading-[1.35] text-primary"
