@@ -11,6 +11,7 @@ import { SectionRow } from '@/components/ui/primitives'
 import { DirPicker } from '@/components/settings/DirPicker'
 import {
   ACT_GROUPS,
+  SETTINGS_GROUPS,
   displayTitle,
   devName,
   isNsfwBlurEnabled,
@@ -346,7 +347,7 @@ export function SettingsModal({
         <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
           <div className="shrink-0 border-b border-hairline p-2 sm:w-52 sm:border-b-0 sm:border-r">
             <div className="flex gap-1 overflow-x-auto sm:block sm:space-y-2 sm:overflow-visible">
-              {ACT_GROUPS.map(g => (
+              {SETTINGS_GROUPS.map(g => (
                 <div key={g.title}>
                   <p className="hidden px-2.5 pb-1 pt-1.5 section-label sm:block">{g.title}</p>
                   <div className="flex gap-1 sm:block sm:space-y-0.5">
@@ -399,6 +400,11 @@ export function SettingsModal({
                     </button>
                   </div>
                 </Row>
+              </>
+            )}
+
+            {activeSection === 'storage' && (
+              <>
                 <Row title="数据存储位置">
                   <Hint>
                     所有数据（游戏列表 / 刮削缓存 / 游玩时长 / 封面图片 / 设置）都保存在这里，换路径时自动迁移现有数据。
@@ -428,6 +434,11 @@ export function SettingsModal({
                   </p>
                   <p className="text-[0.8125rem] text-warn">更改后需重启启动器生效；迁移只复制、不删除旧数据。</p>
                 </Row>
+              </>
+            )}
+
+            {activeSection === 'backup' && (
+              <>
                 <Row title="数据备份与导出">
                   <Hint>
                     每次保存时自动备份到 <Code>data/backup</Code>（保留最近 5 份）；也可手动导出完整资料库或 CSV 列表。
@@ -459,7 +470,7 @@ export function SettingsModal({
               </>
             )}
 
-            {activeSection === 'cover' && (
+            {activeSection === 'nsfw' && (
               <Row title="NSFW 封面模糊">
                 <button
                   onClick={() => {
@@ -483,7 +494,7 @@ export function SettingsModal({
               </Row>
             )}
 
-            {activeSection === 'fix' && (
+            {activeSection === 'appearance' && (
               <>
                 <Row title="界面缩放">
                   <div className="grid grid-cols-4 gap-2">
@@ -503,6 +514,11 @@ export function SettingsModal({
                   </div>
                   <Hint>缩放会同时放大文字与间距；高 DPI 屏建议调到 125% 以上。桌面窗口默认 1560×940。</Hint>
                 </Row>
+              </>
+            )}
+
+            {activeSection === 'cache' && (
+              <>
                 <Row title="刮削缓存">
                   <div className="flex items-center justify-between">
                     <span className="text-[0.875rem] text-secondary">缓存条目</span>
@@ -524,7 +540,7 @@ export function SettingsModal({
               </>
             )}
 
-            {activeSection === 'dev' && (
+            {activeSection === 'proxy' && (
               <Row title="代理服务器（可选）">
                 <div className="flex flex-wrap gap-2">
                   <input
@@ -548,7 +564,7 @@ export function SettingsModal({
               </Row>
             )}
 
-            {activeSection === 'path' && (
+            {activeSection === 'lan' && (
               <Row title="局域网访问">
                 {networkInfo ? (
                   <div className="space-y-2">
@@ -584,7 +600,7 @@ export function SettingsModal({
               </Row>
             )}
 
-            {activeSection === 'char' && (
+            {activeSection === 'about' && (
               <Row title="其他说明">
                 <ul className="list-disc space-y-1.5 pl-4 text-[0.8125rem] leading-relaxed text-tertiary">
                   <li>刮削数据源：VNDB → Bangumi → YMgal → CnGal，按相似度匹配防错配。</li>

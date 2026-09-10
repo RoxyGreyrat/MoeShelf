@@ -159,7 +159,10 @@ async function pruneBackups(backupDir: string, base: string): Promise<void> {
  * 原子写 JSON（先写临时文件再 rename）。
  * 写 library.json / settings.json / playtime.json 前，先把旧文件备份到
  * data/backup/<basename>.<yyyyMMdd-HHmmss>.json，每个 basename 保留最近 5 份。
+ * 临时文件名带自增序号：同一毫秒内的两次写入如果共用临时文件，会互相覆盖内容。
  */
+let tmpSeq = 0
+
 export async function writeJsonAtomic(file: string, data: unknown): Promise<void> {
   const dir = await resolveDataDir()
   await fs.mkdir(path.dirname(file), { recursive: true })
@@ -177,7 +180,7 @@ export async function writeJsonAtomic(file: string, data: unknown): Promise<void
       // 旧文件不存在或备份失败时静默跳过，不阻塞主写入
     }
   }
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`
+  const tmp = `${file}.${process.pid}.${Date.now()}.${++tmpSeq}.tmp`
   await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8')
   await fs.rename(tmp, file)
 }
@@ -228,29 +231,68 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 /** 模块 3247 z：按传入的部分字段合并并写回 settings.json，返回合并结果 */
-export async function updateSettings(patch: Partial<Settings>): Promise<Settings> {
-  const current = await loadSettings()
-  const merged: Settings = {
-    rootPath: typeof patch.rootPath === 'string' ? patch.rootPath : current.rootPath,
-    filterMode:
-      patch.filterMode === 'loose'
-        ? 'loose'
-        : patch.filterMode === 'strict'
-          ? 'strict'
-          : current.filterMode,
-    exeMap: patch.exeMap && typeof patch.exeMap === 'object' ? patch.exeMap : current.exeMap,
-    coverMap:
-      patch.coverMap && typeof patch.coverMap === 'object' ? patch.coverMap : current.coverMap,
-    titleMap:
-      patch.titleMap && typeof patch.titleMap === 'object' ? patch.titleMap : current.titleMap,
-    devMap: patch.devMap && typeof patch.devMap === 'object' ? patch.devMap : current.devMap,
-    proxy: typeof patch.proxy === 'string' ? patch.proxy.trim() : current.proxy,
-    ignorePaths: Array.isArray(patch.ignorePaths) ? patch.ignorePaths : current.ignorePaths,
+/**
+ * 【并发保护】updateSettings 是「读 → 合并 → 全量写」，必须串行执行。
+ * 之前的实现每次都从模块级缓存取当前值，且写入之间可以交错：
+ * 两个并发保存请求（客户端会同时发多个）会各自读到同一份旧快照，
+ * 后写的一方把前一方刚写进去的键整片覆盖掉 —— 表现为「手动保存的数据总有几个会变回去」。
+ *
+ * 现在改为：
+ *   1) 所有写入排进同一条 Promise 队列，逐个执行；
+ *   2) 每次执行前【重新读磁盘】，而不是用内存缓存，保证基于最新内容合并。
+ */
+let settingsWriteChain: Promise<unknown> = Promise.resolve()
+
+export async function updateSettings(
+  patch: Partial<Settings>,
+  /**
+   * 需要「按键合并」的映射表字段名（exeMap / coverMap / titleMap / devMap）。
+   * 这些字段的 patch 只提供要新增或修改的键，实际合并【在串行临界区内】完成：
+   * 若在进入队列之前就合并，两个并发请求会各自基于同一份旧快照算出一模一样的结果，
+   * 后写的一方仍然会抹掉先写方的键（这就是「手动保存的数据总有几个变回去」的真正原因）。
+   */
+  mergeMaps: (keyof Settings)[] = [],
+): Promise<Settings> {
+  const run = async (): Promise<Settings> => {
+    // 关键：读磁盘的当前内容（而不是 settingsCache），避免用旧快照覆盖别人的写入
+    settingsCache = null
+    const current = await loadSettings()
+    const pick = (key: keyof Settings): Record<string, string> => {
+      const patchMap = patch[key] as Record<string, string> | undefined
+      const curMap = (current[key] ?? {}) as Record<string, string>
+      if (!patchMap || typeof patchMap !== 'object') return curMap
+      if (!mergeMaps.includes(key)) return patchMap
+      // 按键合并：patch 里出现的键覆盖，未出现的键保留磁盘上的最新值
+      const out: Record<string, string> = { ...curMap }
+      for (const [k, v] of Object.entries(patchMap)) {
+        if (typeof v === 'string') out[k] = v
+      }
+      return out
+    }
+    const merged: Settings = {
+      rootPath: typeof patch.rootPath === 'string' ? patch.rootPath : current.rootPath,
+      filterMode:
+        patch.filterMode === 'loose'
+          ? 'loose'
+          : patch.filterMode === 'strict'
+            ? 'strict'
+            : current.filterMode,
+      exeMap: pick('exeMap'),
+      coverMap: pick('coverMap'),
+      titleMap: pick('titleMap'),
+      devMap: pick('devMap'),
+      proxy: typeof patch.proxy === 'string' ? patch.proxy.trim() : current.proxy,
+      ignorePaths: Array.isArray(patch.ignorePaths) ? patch.ignorePaths : current.ignorePaths,
+    }
+    settingsCache = merged
+    const file = await settingsFile()
+    await writeJsonAtomic(file, merged)
+    return merged
   }
-  settingsCache = merged
-  const file = await settingsFile()
-  await writeJsonAtomic(file, merged)
-  return merged
+  const next = settingsWriteChain.then(run, run)
+  // 队列本身不允许因为某次失败而中断后续写入
+  settingsWriteChain = next.catch(() => {})
+  return next
 }
 
 /** 保存 settings（合并语义，等价于编译产物 3247 z） */

@@ -159,6 +159,39 @@ export const ACT_GROUPS: { title: string; items: { key: string; icon: string; la
   },
 ]
 
+// 全局设置弹窗的分组与导航（与详情弹窗的「更多设置」是两回事，键名一一对应右侧内容）
+export const SETTINGS_GROUPS: { title: string; items: { key: string; icon: string; label: string }[] }[] = [
+  {
+    title: '资料库',
+    items: [
+      { key: 'root', icon: 'folder', label: '游戏根目录' },
+      { key: 'storage', icon: 'drive', label: '数据存储位置' },
+      { key: 'backup', icon: 'download', label: '数据备份与导出' },
+    ],
+  },
+  {
+    title: '界面',
+    items: [
+      { key: 'appearance', icon: 'grid', label: '界面缩放' },
+      { key: 'nsfw', icon: 'eyeOff', label: 'NSFW 封面模糊' },
+    ],
+  },
+  {
+    title: '网络',
+    items: [
+      { key: 'proxy', icon: 'external', label: '代理服务器' },
+      { key: 'lan', icon: 'info', label: '局域网访问' },
+    ],
+  },
+  {
+    title: '维护',
+    items: [
+      { key: 'cache', icon: 'refresh', label: '刮削缓存' },
+      { key: 'about', icon: 'book', label: '说明' },
+    ],
+  },
+]
+
 // ---------------------------------------------------------------------------
 // 全局刮削开关（localStorage 记忆）
 // ---------------------------------------------------------------------------
