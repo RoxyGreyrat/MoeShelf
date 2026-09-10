@@ -10,6 +10,7 @@ import { buildCsv, downloadCsv } from '@/lib/csv'
 import { SectionRow } from '@/components/ui/primitives'
 import { DirPicker } from '@/components/settings/DirPicker'
 import {
+  ACT_GROUPS,
   displayTitle,
   devName,
   isNsfwBlurEnabled,
@@ -55,6 +56,8 @@ export function SettingsModal({
   const [proxyTesting, setProxyTesting] = useState(false)
   const [proxyMsg, setProxyMsg] = useState<string | null>(null)
   const [, setNsfwTick] = useState(0)
+  // 左侧分组导航（单选）
+  const [activeSection, setActiveSection] = useState('root')
 
   const copyText = async (text: string) => {
     try {
@@ -311,262 +314,286 @@ export function SettingsModal({
       push('导出 CSV 失败', 'error')
     }
   }
+  const Row = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <section className="panel overflow-hidden">
+      <h3 className="border-b border-hairline px-4 py-2.5 text-[0.875rem] font-semibold text-primary">{title}</h3>
+      <div className="space-y-3 p-4">{children}</div>
+    </section>
+  )
+
+  const Hint = ({ children }: { children: React.ReactNode }) => (
+    <p className="text-[0.8125rem] leading-relaxed text-tertiary">{children}</p>
+  )
+
+  const Code = ({ children }: { children: React.ReactNode }) => (
+    <code className="radius-xs bg-sunken px-1.5 py-0.5 text-[0.8125rem] text-secondary">{children}</code>
+  )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className="relative max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-ink-900 p-6 shadow-2xl animate-scale-in">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">设置</h2>
-          <button
-            onClick={onClose}
-            aria-label="关闭"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-white/60 transition hover:bg-white/[0.06] hover:text-white"
-          >
+      <div className="relative flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden radius-2xl border border-strong bg-surface-1 shadow-token-lg animate-scale-in">
+        <div className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-3">
+          <h2 className="text-[1rem] font-semibold text-primary">设置</h2>
+          <span className="min-w-0 truncate text-[0.8125rem] text-tertiary">
+            {games.length} 个游戏 · 数据保存在本机
+          </span>
+          <button onClick={onClose} aria-label="关闭" className="icon-btn ml-auto h-8 w-8 shrink-0 radius-pill">
             <Icon name="x" className="h-4 w-4" />
           </button>
         </div>
-        <div className="space-y-4">
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-[0.9375rem] text-white/70">游戏根目录</div>
-            <div className="flex gap-2">
-              <input
-                value={rootInput}
-                onChange={e => setRootInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !rootSaving && void saveRoot(rootInput)}
-                placeholder={settings?.rootPath ? `当前：${settings.rootPath}（输入新路径或点浏览重新选择）` : '例如：D:\\Galgames'}
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-[0.8125rem] text-white placeholder:text-white/25 focus:border-indigo-400/50 focus:outline-none"
-              />
-              <button
-                onClick={() => setPickerTarget('root')}
-                title="浏览目录"
-                className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-[0.8125rem] text-secondary transition hover:bg-white/[0.06]"
-              >
-                浏览…
-              </button>
-            </div>
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-[0.6875rem] leading-relaxed text-white/35">
-                启动器将扫描该目录下的一级子文件夹作为游戏，保存后自动开始扫描。
-              </p>
-              <button
-                onClick={() => !rootSaving && void saveRoot(rootInput)}
-                disabled={rootSaving}
-                className="btn btn-sm btn-primary shrink-0 disabled:opacity-60"
-              >
-                {rootSaving ? '保存中…' : '保存并扫描'}
-              </button>
-            </div>
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-[0.9375rem] text-white/70">数据存储位置</div>
-            <p className="mb-2 text-[0.6875rem] leading-relaxed text-white/35">
-              所有数据（游戏列表 / 刮削缓存 / 游玩时长 / 封面图片 / 设置）都保存在这里，换路径时自动迁移现有数据。
-            </p>
-            <div className="flex gap-2">
-              <input
-                value={dataPathInput}
-                onChange={e => setDataPathInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !migrating && void migrateData(dataPathInput)}
-                placeholder="例如：D:\GalgameData"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-[0.8125rem] text-white placeholder:text-white/25 focus:border-indigo-400/50 focus:outline-none"
-              />
-              <button
-                onClick={() => setPickerTarget('data')}
-                title="浏览目录"
-                className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-[0.8125rem] text-secondary transition hover:bg-white/[0.06]"
-              >
-                浏览…
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="min-w-0 flex-1 truncate text-[0.6875rem] text-white/30">
-                当前：
-                {storageInfo?.dataPath ?? '…'}
-                {storageInfo && storageInfo.dataPath !== storageInfo.defaultPath ? '（自定义）' : '（默认，启动器目录下）'}
-              </p>
-              <button
-                onClick={() => !migrating && void migrateData(dataPathInput)}
-                disabled={migrating || dataPathInput === storageInfo?.dataPath}
-                className="btn btn-sm btn-primary shrink-0 disabled:opacity-60"
-              >
-                {migrating ? '迁移中…' : '更改并迁移'}
-              </button>
-            </div>
-            <p className="mt-1.5 text-[0.625rem] text-amber-300/70">更改后需重启启动器生效；迁移只复制不删除旧数据。</p>
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-[0.9375rem] text-white/70">NSFW 封面模糊</div>
-            <button
-              onClick={() => {
-                setNsfwBlurEnabled(!isNsfwBlurEnabled())
-                try {
-                  localStorage.setItem('gl-nsfw-blur', isNsfwBlurEnabled() ? '1' : '0')
-                } catch (e) {}
-                setNsfwTick(t => t + 1)
-                onNsfwBlurChange?.()
-              }}
-              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-[0.8125rem] transition ${
-                isNsfwBlurEnabled()
-                  ? 'border-accent-soft bg-accent-soft text-primary'
-                  : 'border-hairline bg-sunken text-secondary'
-              }`}
-            >
-              <span>R18 封面自动高斯模糊并显示 NSFW 角标</span>
-              <span className="font-medium">{isNsfwBlurEnabled() ? '已开启' : '已关闭'}</span>
-            </button>
-            <p className="mt-2 text-[0.6875rem] leading-relaxed text-white/40">
-              按封面图本身判断（VNDB 图片分级）；关闭后恢复显示。
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-[0.9375rem] text-white/70">界面缩放</div>
-            <div className="grid grid-cols-4 gap-2">
-              {[100, 112, 125, 150].map(v => (
-                <button
-                  key={v}
-                  onClick={() => setScale(v)}
-                  className={`rounded-lg border py-2 text-[0.9375rem] font-medium transition ${
-                    uiScale === v
-                      ? 'border-indigo-400/60 bg-indigo-500/15 text-white'
-                      : 'border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.06]'
-                  }`}
-                >
-                  {v}%
-                </button>
+
+        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
+          <div className="shrink-0 border-b border-hairline p-2 sm:w-52 sm:border-b-0 sm:border-r">
+            <div className="flex gap-1 overflow-x-auto sm:block sm:space-y-2 sm:overflow-visible">
+              {ACT_GROUPS.map(g => (
+                <div key={g.title}>
+                  <p className="hidden px-2.5 pb-1 pt-1.5 section-label sm:block">{g.title}</p>
+                  <div className="flex gap-1 sm:block sm:space-y-0.5">
+                    {g.items.map(item => {
+                      const active = activeSection === item.key
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => setActiveSection(item.key)}
+                          aria-current={active ? 'true' : undefined}
+                          className={`flex shrink-0 items-center gap-2 radius-sm px-2.5 py-1.5 text-left text-[0.8125rem] transition sm:w-full ${
+                            active
+                              ? 'bg-accent-soft font-semibold text-accent'
+                              : 'text-secondary hover:bg-hoverable hover:text-primary'
+                          }`}
+                        >
+                          <Icon name={item.icon} className="h-3.5 w-3.5 shrink-0" />
+                          <span className="whitespace-nowrap">{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
-            <p className="mt-2 text-[0.6875rem] leading-relaxed text-white/35">高 DPI 屏建议调到 125% 以上。</p>
           </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-[0.9375rem] text-white/70">代理服务器（可选）</div>
-            <div className="flex gap-2">
-              <input
-                value={proxyInput}
-                onChange={e => setProxyInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && void saveProxy()}
-                placeholder="本地代理 http://127.0.0.1:7890（Clash / V2Ray 默认端口）"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-[0.8125rem] text-white placeholder:text-white/25 focus:border-indigo-400/50 focus:outline-none"
-              />
-              <button
-                onClick={() => void saveProxy()}
-                className="shrink-0 rounded-lg bg-indigo-500/90 px-3 py-2 text-[0.8125rem] font-medium text-white transition hover:bg-indigo-400"
-              >
-                保存
-              </button>
-              <button
-                onClick={() => void testProxy()}
-                disabled={proxyTesting}
-                className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-[0.8125rem] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white disabled:opacity-50"
-              >
-                {proxyTesting ? '测试中…' : '测试连接'}
-              </button>
-            </div>
-            {proxyMsg && <p className="mt-2 text-[0.6875rem] leading-relaxed text-white/55">{proxyMsg}</p>}
-            <p className="mt-2 text-[0.6875rem] leading-relaxed text-white/35">
-              VNDB / Bangumi 服务器在境外，国内直连慢或不稳定；配置本地代理后，刮削、搜索、封面全部走代理。留空则直连。
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-[0.9375rem] text-white/70">局域网访问</div>
-            {networkInfo ? (
-              <div className="space-y-2">
-                {networkInfo.ips.map(ip => {
-                  const url = `http://${ip}:${networkInfo.port}`
-                  return (
-                    <div key={ip} className="flex items-center gap-2">
-                      <code className="min-w-0 flex-1 truncate rounded-lg bg-black/40 px-2 py-1.5 text-[0.8125rem] text-indigo-200">
-                        {url}
-                      </code>
-                      <button
-                        onClick={() => copyText(url)}
-                        className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1.5 text-[0.6875rem] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
-                      >
-                        复制
-                      </button>
-                    </div>
-                  )
-                })}
-                {qrDataUrl && networkInfo.ips.length > 0 && (
-                  <div className="flex items-center gap-3 pt-1">
-                    <img src={qrDataUrl} alt="手机扫码访问" className="h-24 w-24 shrink-0 rounded-lg bg-white p-1" />
-                    <div className="text-[0.6875rem] leading-relaxed text-white/40">
-                      同一局域网下，扫扫描二维码（或浏览器输入上方地址）
-                      <br />
-                      无法连接时：右键「开启局域网访问.bat」以管理员身份运行一次
-                      <br />
-                      其他设备仅支持添加查看，启动游戏仍在电脑上执行
-                    </div>
+
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+            {activeSection === 'root' && (
+              <>
+                <Row title="游戏根目录">
+                  <Hint>启动器扫描该目录下的一级子文件夹作为游戏；保存后自动开始扫描。</Hint>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      value={rootInput}
+                      onChange={e => setRootInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !rootSaving && void saveRoot(rootInput)}
+                      placeholder={settings?.rootPath ? `当前：${settings.rootPath}` : '例如：D:\\Galgames'}
+                      className="field h-9 min-w-0 flex-1 px-2.5"
+                    />
+                    <button onClick={() => setPickerTarget('root')} className="btn btn-sm btn-soft shrink-0">
+                      浏览…
+                    </button>
+                    <button
+                      onClick={() => !rootSaving && void saveRoot(rootInput)}
+                      disabled={rootSaving}
+                      className="btn btn-sm btn-primary shrink-0"
+                    >
+                      {rootSaving ? '保存中…' : '保存并扫描'}
+                    </button>
                   </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-[0.8125rem] text-quaternary">正在获取本机网络地址…</p>
+                </Row>
+                <Row title="数据存储位置">
+                  <Hint>
+                    所有数据（游戏列表 / 刮削缓存 / 游玩时长 / 封面图片 / 设置）都保存在这里，换路径时自动迁移现有数据。
+                  </Hint>
+                  <div className="flex flex-wrap gap-2">
+                    <input
+                      value={dataPathInput}
+                      onChange={e => setDataPathInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !migrating && void migrateData(dataPathInput)}
+                      placeholder="例如：D:\\GalgameData"
+                      className="field h-9 min-w-0 flex-1 px-2.5"
+                    />
+                    <button onClick={() => setPickerTarget('data')} className="btn btn-sm btn-soft shrink-0">
+                      浏览…
+                    </button>
+                    <button
+                      onClick={() => !migrating && void migrateData(dataPathInput)}
+                      disabled={migrating || dataPathInput === storageInfo?.dataPath}
+                      className="btn btn-sm btn-primary shrink-0"
+                    >
+                      {migrating ? '迁移中…' : '更改并迁移'}
+                    </button>
+                  </div>
+                  <p className="break-all text-[0.8125rem] text-quaternary">
+                    当前：{storageInfo?.dataPath ?? '…'}
+                    {storageInfo && storageInfo.dataPath !== storageInfo.defaultPath ? '（自定义）' : '（默认，启动器目录下）'}
+                  </p>
+                  <p className="text-[0.8125rem] text-warn">更改后需重启启动器生效；迁移只复制、不删除旧数据。</p>
+                </Row>
+                <Row title="数据备份与导出">
+                  <Hint>
+                    每次保存时自动备份到 <Code>data/backup</Code>（保留最近 5 份）；也可手动导出完整资料库或 CSV 列表。
+                  </Hint>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => void exportBackup()} disabled={exporting} className="btn btn-sm btn-soft">
+                      {exporting ? '导出中…' : '导出资料'}
+                    </button>
+                    <label
+                      className={`btn btn-sm btn-primary cursor-pointer ${importing ? 'pointer-events-none opacity-50' : ''}`}
+                    >
+                      {importing ? '导入中…' : '导入资料'}
+                      <input
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        onChange={e => {
+                          const f = e.target.files?.[0]
+                          if (f) void importBackup(f)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                    <button onClick={exportCsv} className="btn btn-sm btn-soft">
+                      导出 CSV
+                    </button>
+                  </div>
+                </Row>
+              </>
             )}
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="flex items-center justify-between text-[0.9375rem]">
-              <span className="text-white/70">刮削缓存条目</span>
-              <span className="font-semibold text-white tabular-nums">{cacheInfo === null ? '…' : cacheInfo.count}</span>
-            </div>
-            <p className="mt-2 text-[0.8125rem] leading-relaxed text-white/35">
-              元数据缓存在服务端 <code className="rounded bg-black/40 px-1 py-0.5">data/cache.json</code>
-              ，下次扫描会先命中缓存，避免重复请求网络。
-            </p>
-            <button
-              onClick={clearCache}
-              disabled={cacheClearing || (cacheInfo?.count ?? 0) === 0}
-              className="mt-3 w-full rounded-xl border border-red-400/25 bg-red-500/10 px-4 py-2.5 text-[0.9375rem] font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
-            >
-              {cacheClearing ? '正在清空…' : '清空全部刮削缓存'}
-            </button>
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="mb-2 text-[0.9375rem] text-white/70">数据备份与导出</div>
-            <p className="mb-2 text-[0.6875rem] leading-relaxed text-white/35">
-              每次保存时自动备份到 <code className="rounded bg-black/40 px-1 py-0.5">data/backup</code>
-              （保留最近 5 份）；也可手动导出完整资料库或 CSV 列表。
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => void exportBackup()}
-                disabled={exporting}
-                className="btn btn-sm btn-primary shrink-0"
-              >
-                {exporting ? '导出中…' : '导出资料'}
-              </button>
-              <label
-                className={`shrink-0 cursor-pointer rounded-lg bg-indigo-500/90 px-3 py-1.5 text-[0.8125rem] font-medium text-white transition hover:bg-indigo-400 ${
-                  importing ? 'pointer-events-none opacity-50' : ''
-                }`}
-              >
-                {importing ? '导入中…' : '导入资料'}
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={e => {
-                    const f = e.target.files?.[0]
-                    if (f) void importBackup(f)
-                    e.target.value = ''
+
+            {activeSection === 'cover' && (
+              <Row title="NSFW 封面模糊">
+                <button
+                  onClick={() => {
+                    setNsfwBlurEnabled(!isNsfwBlurEnabled())
+                    try {
+                      localStorage.setItem('gl-nsfw-blur', isNsfwBlurEnabled() ? '1' : '0')
+                    } catch (e) {}
+                    setNsfwTick(t => t + 1)
+                    onNsfwBlurChange?.()
                   }}
-                />
-              </label>
-              <button
-                onClick={exportCsv}
-                className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-[0.8125rem] font-medium text-white/75 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                导出 CSV
-              </button>
-            </div>
-          </div>
-          <div className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 text-[0.8125rem] leading-relaxed text-white/40">
-            <p className="mb-1 font-medium text-white/60">说明</p>
-            <ul className="list-disc space-y-1 pl-4">
-              <li>刮削数据源：VNDB → Bangumi → YMgal → CnGal，按相似度匹配防错配。</li>
-              <li>「启动」会直接运行游戏 exe（游戏本体不经过浏览器）。</li>
-              <li>本工具仅在你的电脑上运行，不上传任何文件。</li>
-            </ul>
+                  className={`flex w-full items-center justify-between radius-md border px-3 py-2.5 text-[0.875rem] transition ${
+                    isNsfwBlurEnabled()
+                      ? 'border-accent-soft bg-accent-soft font-medium text-accent'
+                      : 'border-hairline bg-sunken text-secondary'
+                  }`}
+                >
+                  <span>R18 封面自动高斯模糊并显示 NSFW 角标</span>
+                  <span className="shrink-0">{isNsfwBlurEnabled() ? '已开启' : '已关闭'}</span>
+                </button>
+                <Hint>按封面图本身判断（VNDB 图片分级）；关闭后恢复显示。</Hint>
+              </Row>
+            )}
+
+            {activeSection === 'fix' && (
+              <>
+                <Row title="界面缩放">
+                  <div className="grid grid-cols-4 gap-2">
+                    {[100, 112, 125, 150].map(v => (
+                      <button
+                        key={v}
+                        onClick={() => setScale(v)}
+                        className={`radius-md border py-2 text-[0.9375rem] font-medium transition ${
+                          uiScale === v
+                            ? 'border-accent-soft bg-accent-soft text-accent'
+                            : 'border-hairline bg-sunken text-secondary hover:bg-hoverable hover:text-primary'
+                        }`}
+                      >
+                        {v}%
+                      </button>
+                    ))}
+                  </div>
+                  <Hint>缩放会同时放大文字与间距；高 DPI 屏建议调到 125% 以上。桌面窗口默认 1560×940。</Hint>
+                </Row>
+                <Row title="刮削缓存">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.875rem] text-secondary">缓存条目</span>
+                    <span className="text-[0.9375rem] font-semibold tabular-nums text-primary">
+                      {cacheInfo === null ? '…' : cacheInfo.count}
+                    </span>
+                  </div>
+                  <Hint>
+                    元数据缓存在服务端 <Code>data/cache.json</Code>，下次扫描先命中缓存，避免重复请求网络。
+                  </Hint>
+                  <button
+                    onClick={clearCache}
+                    disabled={cacheClearing || (cacheInfo?.count ?? 0) === 0}
+                    className="btn btn-sm w-full border border-danger-soft bg-danger-soft text-danger"
+                  >
+                    {cacheClearing ? '正在清空…' : '清空全部刮削缓存'}
+                  </button>
+                </Row>
+              </>
+            )}
+
+            {activeSection === 'dev' && (
+              <Row title="代理服务器（可选）">
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    value={proxyInput}
+                    onChange={e => setProxyInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && void saveProxy()}
+                    placeholder="http://127.0.0.1:7890（Clash / V2Ray 默认端口）"
+                    className="field h-9 min-w-0 flex-1 px-2.5"
+                  />
+                  <button onClick={() => void saveProxy()} className="btn btn-sm btn-primary shrink-0">
+                    保存
+                  </button>
+                  <button onClick={() => void testProxy()} disabled={proxyTesting} className="btn btn-sm btn-soft shrink-0">
+                    {proxyTesting ? '测试中…' : '测试连接'}
+                  </button>
+                </div>
+                {proxyMsg && <p className="text-[0.8125rem] text-secondary">{proxyMsg}</p>}
+                <Hint>
+                  VNDB / Bangumi 服务器在境外，国内直连慢或不稳定；配置本地代理后，刮削、搜索、封面请求全部走代理。留空则直连。
+                </Hint>
+              </Row>
+            )}
+
+            {activeSection === 'path' && (
+              <Row title="局域网访问">
+                {networkInfo ? (
+                  <div className="space-y-2">
+                    {networkInfo.ips.map(ip => {
+                      const url = `http://${ip}:${networkInfo.port}`
+                      return (
+                        <div key={ip} className="flex items-center gap-2">
+                          <code className="min-w-0 flex-1 truncate radius-sm bg-sunken px-2 py-1.5 text-[0.8125rem] text-accent">
+                            {url}
+                          </code>
+                          <button onClick={() => copyText(url)} className="btn btn-sm btn-soft shrink-0">
+                            复制
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {qrDataUrl && networkInfo.ips.length > 0 && (
+                      <div className="flex items-start gap-3 pt-1">
+                        <img src={qrDataUrl} alt="手机扫码访问" className="h-24 w-24 shrink-0 radius-md bg-white p-1" />
+                        <div className="min-w-0 text-[0.8125rem] leading-relaxed text-tertiary">
+                          同一局域网下扫码即可打开（或在手机浏览器输入上方地址）
+                          <br />
+                          连不上时：右键「开启局域网访问.bat」以管理员身份运行一次
+                          <br />
+                          手机端仅可浏览与查看，启动游戏仍在电脑上执行
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Hint>正在获取本机网络地址…</Hint>
+                )}
+              </Row>
+            )}
+
+            {activeSection === 'char' && (
+              <Row title="其他说明">
+                <ul className="list-disc space-y-1.5 pl-4 text-[0.8125rem] leading-relaxed text-tertiary">
+                  <li>刮削数据源：VNDB → Bangumi → YMgal → CnGal，按相似度匹配防错配。</li>
+                  <li>「启动」会直接运行游戏 exe（游戏本体不经过浏览器）。</li>
+                  <li>本工具仅在你的电脑上运行，不会上传任何文件。</li>
+                  <li>需要 Chrome / Edge 浏览器；局域网访问时手机与电脑需在同一 Wi-Fi。</li>
+                </ul>
+              </Row>
+            )}
           </div>
         </div>
       </div>
@@ -582,8 +609,3 @@ export function SettingsModal({
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// 空状态 / 进度条 / 筛选标签
-// ---------------------------------------------------------------------------
-

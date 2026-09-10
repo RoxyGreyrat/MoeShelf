@@ -164,19 +164,19 @@ export function SearchCandidateRow({
   onApply: (c: SearchCandidate) => void
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-2 transition hover:border-indigo-400/30">
-      <div className="relative h-11 w-8 shrink-0 overflow-hidden rounded bg-ink-800">
+    <div className="flex items-center gap-3 radius-lg border border-hairline bg-surface-1 p-2.5 transition hover:border-accent-soft">
+      <div className="relative h-12 w-9 shrink-0 overflow-hidden radius-sm bg-surface-3">
         {c.coverUrl ? <CoverImage url={c.coverUrl} alt={c.title} /> : <CoverPlaceholder name={c.title} />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[0.8125rem] font-medium text-white/85">{c.title}</p>
-        <p className="truncate text-[0.75rem] text-on-overlay/35">
+        <p className="truncate text-[0.875rem] font-medium text-primary">{c.title}</p>
+        <p className="truncate text-[0.8125rem] text-tertiary">
           {c.originalTitle && c.originalTitle !== c.title ? `${c.originalTitle} · ` : ''}
-          <span className="font-semibold text-white/55">{c.released ? c.released.slice(0, 4) : '日期未知'}</span>
+          <span className="font-semibold text-secondary">{c.released ? c.released.slice(0, 4) : '日期未知'}</span>
           {c.rating ? ` · ★ ${(c.rating / 10).toFixed(2)}` : ''}
           {c.votecount ? `（${c.votecount.toLocaleString()}票）` : ''}
           {c.developers?.length ? ` · ${c.developers.join('/')}` : ''}
-          <span className="ml-1 text-indigo-300/70">
+          <span className="ml-1 text-accent">
             {SOURCE_LABELS[c.source]} #{c.id}
           </span>
         </p>
@@ -184,7 +184,7 @@ export function SearchCandidateRow({
       <button
         onClick={() => onApply(c)}
         disabled={applying !== null}
-        className="shrink-0 rounded-lg bg-emerald-500/90 px-2.5 py-1.5 text-[0.6875rem] font-medium text-white transition hover:bg-emerald-400 disabled:opacity-50"
+        className="btn btn-sm btn-success shrink-0"
       >
         {applying === c.id ? '应用中…' : '选择'}
       </button>
@@ -194,32 +194,48 @@ export function SearchCandidateRow({
 
 
 // ---------------------------------------------------------------------------
-// 搜索结果条目（修正条目 / 手动匹配）
+// 设置分组标题行（点标题栏即可展开 / 收起）
+// ---------------------------------------------------------------------------
 export function SectionRow({
   active,
   icon,
   label,
   desc,
   onClick,
+  onToggle,
 }: {
   active: boolean
   icon: string
   label: string
   desc: string
-  onClick: () => void
+  onClick?: () => void
+  onToggle?: () => void
 }) {
+  const toggle = onToggle ?? onClick
   return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition ${
-        active ? 'bg-indigo-500/15 text-indigo-200' : 'hover:bg-white/[0.05] hover:text-white'
-      }`}
-    >
-      <Icon name={icon} className="h-3.5 w-3.5 shrink-0" />
-      <span className="shrink-0 text-[0.8125rem] font-medium">{label}</span>
-      <span className="min-w-0 flex-1 truncate text-right text-[0.75rem] text-quaternary">{desc}</span>
-      <Icon name="plus" className={`h-3 w-3 shrink-0 transition-transform ${active ? 'rotate-45' : ''}`} />
-    </button>
+    <div className={`flex items-start gap-2.5 radius-lg border px-3 py-2.5 transition ${
+      active ? 'border-accent-soft bg-accent-soft' : 'border-hairline bg-surface-1'
+    }`}>
+      <Icon name={icon} className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-accent' : 'text-quaternary'}`} />
+      <button
+        onClick={toggle}
+        aria-expanded={active}
+        className="min-w-0 flex-1 text-left"
+      >
+        <p className={`text-[0.875rem] font-semibold ${active ? 'text-accent' : 'text-primary'}`}>{label}</p>
+        {desc ? (
+          <p className={`mt-0.5 text-[0.8125rem] leading-relaxed ${active ? 'text-secondary' : 'text-tertiary'}`}>{desc}</p>
+        ) : null}
+      </button>
+      <button
+        onClick={toggle}
+        title={active ? '收起' : '展开'}
+        aria-label={active ? '收起' : '展开'}
+        className="icon-btn h-7 w-7 shrink-0"
+      >
+        <Icon name={active ? 'up' : 'down'} className="h-4 w-4" />
+      </button>
+    </div>
   )
 }
 

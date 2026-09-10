@@ -297,44 +297,7 @@ function GameCard({
             暂无封面
           </span>
         )}
-        {/* 桌面端：hover 出一排操作；移动端：收进「…」菜单，避免一排黑圆钮压在封面上 */}
-        <div className="absolute bottom-2 right-2 hidden gap-1.5 transition-opacity duration-[var(--dur)] sm:flex sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-          {nd ? null : (
-            <button
-              title="重新获取信息"
-              aria-label={`重新获取信息 ${title}`}
-              onClick={e => {
-                e.stopPropagation()
-                onRescrape()
-              }}
-              className="overlay-btn h-8 w-8"
-            >
-              <Icon name="refresh" className="h-4 w-4" />
-            </button>
-          )}
-          <button
-            title="打开所在文件夹"
-            aria-label={`打开 ${title} 所在文件夹`}
-            onClick={e => {
-              e.stopPropagation()
-              onOpenFolder()
-            }}
-            className={`overlay-btn h-8 w-8${nd ? ' hidden' : ''}`}
-          >
-            <Icon name="folder" className="h-4 w-4" />
-          </button>
-          <button
-            title={nd ? '从列表隐藏' : '从列表移除'}
-            aria-label={nd ? `隐藏 ${title}` : `移除 ${title}`}
-            onClick={e => {
-              e.stopPropagation()
-              onRemove()
-            }}
-            className="overlay-btn h-8 w-8 hover:!bg-red-500/90"
-          >
-            <Icon name="trash" className="h-4 w-4" />
-          </button>
-        </div>
+        {/* 封面上的操作浮层已移除：重新获取 / 打开文件夹 / 移除统一放到卡片底栏，避免与底部按钮重复 */}
 
         {/* 移动端菜单 */}
         <div className="absolute bottom-2 right-2 sm:hidden">
@@ -453,6 +416,18 @@ function GameCard({
             className={nd ? 'h-3.5 w-3.5 shrink-0' : 'h-3.5 w-3.5 fill-current'}
           />
           {nd ? '未下载' : hasExe ? '启动' : '无 exe'}
+        </button>
+        <button
+          onClick={e => {
+            e.stopPropagation()
+            onOpenFolder()
+          }}
+          disabled={nd}
+          title="打开所在文件夹"
+          aria-label={`打开 ${title} 所在文件夹`}
+          className={`icon-btn h-8 w-8 bg-sunken${nd ? ' hidden' : ''}`}
+        >
+          <Icon name="folder" className="h-4 w-4" />
         </button>
         <button
           onClick={e => {
