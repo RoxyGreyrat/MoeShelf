@@ -84,6 +84,53 @@ const ICONS: Record<string, ReactNode> = {
     </>
   ),
   check: <path d="M20 6 9 17l-5-5" />,
+  checkCircle: (
+    <>
+      <path d="M21.8 10A10 10 0 1 1 17 3.3" />
+      <path d="m9 11 3 3L22 4" />
+    </>
+  ),
+  layers: (
+    <>
+      <path d="m12 2 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 12 9 5 9-5" />
+      <path d="m3 17 9 5 9-5" />
+    </>
+  ),
+  panelLeft: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 3v18" />
+    </>
+  ),
+  chart: (
+    <>
+      <line x1="3" y1="21" x2="21" y2="21" />
+      <rect x="5" y="11" width="3.5" height="7" rx="1" />
+      <rect x="10.2" y="6" width="3.5" height="12" rx="1" />
+      <rect x="15.5" y="14" width="3.5" height="4" rx="1" />
+    </>
+  ),
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </>
+  ),
+  moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />,
+  more: (
+    <>
+      <circle cx="12" cy="5" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="12" cy="19" r="1.6" />
+    </>
+  ),
+  arrowUp: (
+    <>
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </>
+  ),
   bookmark: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
   play: <polygon points="6 3 20 12 6 21 6 3" />,
   drive: (
@@ -95,6 +142,20 @@ const ICONS: Record<string, ReactNode> = {
     </>
   ),
   up: <path d="m18 15-6-6-6 6" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.2 2" />
+    </>
+  ),
+  grid: (
+    <>
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </>
+  ),
   star: (
     <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
   ),

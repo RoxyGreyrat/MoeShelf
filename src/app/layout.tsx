@@ -25,7 +25,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-screen bg-ink-950 text-white antialiased">
+      <body className="min-h-screen bg-surface-0 text-primary antialiased">
         <div
           id="moeshelf-root"
           className="min-h-screen"
