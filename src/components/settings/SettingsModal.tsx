@@ -2,6 +2,8 @@
 
 // 由 page.tsx 拆分而来（行为与拆分前逐字一致，仅位置与导入变化）
 
+import StreamQuality from './StreamQuality'
+
 import { useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode-generator'
 import { Icon, Spinner } from '@/components/icons'
@@ -598,6 +600,11 @@ export function SettingsModal({
                   <Hint>正在获取本机网络地址…</Hint>
                 )}
               </Row>
+            )}
+
+            {activeSection === 'stream' && (
+              /* 直接把弹窗自己的 Row / Hint 传进去复用，保证与其它设置分区的样式逐字一致 */
+              <StreamQuality Row={Row} Hint={Hint} />
             )}
 
             {activeSection === 'about' && (

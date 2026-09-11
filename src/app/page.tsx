@@ -969,8 +969,35 @@ function useLibrary() {
           body: JSON.stringify({ exePath: exe, hash: game.pathHash }),
         })
         const json = await resp.json()
-        if (json.ok) push(`已启动「${game.folderName}」`, 'success')
-        else push(json.error ?? '启动失败', 'error')
+        if (json.ok) {
+          push(`已启动「${game.folderName}」`, 'success')
+          // 移动端：启动即串流（把画面推到这台手机上）。电脑端保持原样，只启动不串流。
+          const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+            (navigator.maxTouchPoints > 1 && window.innerWidth < 1200)
+          if (isMobile) {
+            try {
+              const proc = (exe.split(/[\\/]/).pop() || '').replace(/\.exe$/i, '')
+              const host = await fetch('/api/stream/host/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game: displayTitle(game), process: proc, pid: json.pid || 0, exePath: exe }),
+              }).then(r => r.json())
+              if (!host.ok) {
+                push('串流未启动：' + (host.error ?? '未知原因'), 'error')
+                return
+              }
+              const ses = await fetch('/api/stream/hello', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: 'viewer', agent: navigator.userAgent, game: displayTitle(game) }),
+              }).then(r => r.json())
+              if (ses.sessionId) window.location.href = '/stream/' + ses.sessionId
+              else push('串流会话创建失败', 'error')
+            } catch {
+              push('串流启动失败：网络错误', 'error')
+            }
+          }
+        } else push(json.error ?? '启动失败', 'error')
       } catch (e) {
         push('启动失败：网络错误', 'error')
       }

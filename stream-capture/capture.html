@@ -1,0 +1,201 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MoeShelf 串流采集端</title>
+<body style="margin:0;background:#0b0d12;color:#86efac;font:13px/1.6 ui-monospace,monospace">
+<pre id="out" style="padding:12px;white-space:pre-wrap">启动中…</pre>
+<script>
+// MoeShelf 串流采集端渲染进程
+// 源由主进程 setDisplayMediaRequestHandler 指定（零点击），这里只负责：取流 → 连 MoeShelf → WebRTC 推给手机
+const { ipcRenderer } = require('electron')
+
+// 服务地址由主进程通过 cap:info 提供（file:// 下 loadFile 带 query 会加载失败，故不走 URL 参数）
+let SERVER = 'http://localhost:3000'
+const state = window.__capState = { step: 'boot', at: Date.now() }
+function set (step, extra) {
+  Object.assign(state, { step, at: Date.now() }, extra || {})
+  const el = document.getElementById('out')
+  if (el) el.textContent = JSON.stringify(state, null, 1)
+  ipcRenderer.send('cap:report', { step, ...(extra || {}) })
+  console.log('cap-step ' + step + ' ' + JSON.stringify(extra || {}))
+}
+const post = (p, body) => fetch(SERVER + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json())
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+let pc = null
+let stream = null
+
+function newPeer () {
+  const p = new RTCPeerConnection({ iceServers: [] })
+  p.onconnectionstatechange = () => set('pc-state', { pc: p.connectionState })
+  p.onicecandidate = e => { if (e.candidate) post('/api/stream/signal', { role: 'host', msg: { type: 'candidate', candidate: e.candidate.toJSON() } }) }
+
+  // 发送参数：降采样（手机解码吃不消原生 1440p）+ 限码率（同网卡顿的主因）+ 保帧率
+  const srcW = (state.realFrame && state.realFrame.width) || 1280
+  const downScale = Math.max(1, Math.min(4, +(srcW / 1280).toFixed(2)))
+  stream.getTracks().forEach(t => {
+    // 顺序很重要：contentHint 必须在 addTrack 之前设置，否则编码器可能已按默认「语音档」初始化
+    try {
+      if (t.kind === 'audio') t.contentHint = 'music'
+      else if (t.kind === 'video') t.contentHint = 'text'
+    } catch {}
+    // 系统声上的语音处理（回声消除/降噪/自动增益/高通）会把音乐搞糊 → 全部关掉
+    if (t.kind === 'audio') {
+      try {
+        // 不阻塞（applyConstraints 返回 promise，失败也不影响推流）
+        Promise.resolve(t.applyConstraints({ echoCancellation: false, noiseSuppression: false, autoGainControl: false }))
+          .catch(function (e) { set('audio-constraints-fail', { error: String((e && e.message) || e) }) })
+      } catch (e) { set('audio-constraints-fail', { error: String((e && e.message) || e) }) }
+    }
+    const sender = p.addTrack(t, stream)
+    if (t.kind === 'audio') {
+      // 音乐档：256 kbps（Opus 默认语音档约 32kbps 且常为单声道，放 BGM 会明显发闷）
+      try {
+        const ap = sender.getParameters()
+        if (!ap.encodings || !ap.encodings.length) ap.encodings = [{}]
+        const abr = state.opts && state.opts.audioBitrateKbps ? state.opts.audioBitrateKbps : 0
+        if (abr > 0) ap.encodings[0].maxBitrate = abr * 1000   // 0 = 不限制，交给 Opus 自己决定
+        sender.setParameters(ap)
+        if (state.opts && state.opts.audioHint) { try { t.contentHint = state.opts.audioHint } catch (e) {} }
+        const as = t.getSettings ? t.getSettings() : {}
+        set('audio-params', { maxBitrate: 256000, channelCount: as.channelCount, sampleRate: as.sampleRate, hint: t.contentHint })
+      } catch (e) { set('audio-params-fail', { error: e.message }) }
+      return
+    }
+    if (t.kind !== 'video') return
+    try {
+      const params = sender.getParameters()
+      if (!params.encodings || !params.encodings.length) params.encodings = [{}]
+      params.encodings[0].scaleResolutionDownBy = 1        // 默认不缩放：VN 文字被缩过就会糊
+      params.degradationPreference = 'maintain-resolution' // 带宽不足时保分辨率（文字锐利优先）
+      // 注意：默认不设 maxBitrate —— 码率完全交给用户在 /stream/settings 里决定
+      sender.setParameters(params)
+      // 用户在 /stream/settings 的手动设置覆盖上面的默认值
+      const o = state.opts
+      if (o) {
+        try {
+          if (o.scaleToWidth > 0) {
+            params.encodings[0].scaleResolutionDownBy = Math.max(1, Math.min(4, +(srcW / o.scaleToWidth).toFixed(2)))
+          } else params.encodings[0].scaleResolutionDownBy = 1
+          if (o.videoBitrateMbps > 0) params.encodings[0].maxBitrate = Math.round(o.videoBitrateMbps * 1_000_000)
+          if (o.degradationPreference) params.degradationPreference = o.degradationPreference
+          sender.setParameters(params)
+          if (o.contentHint) t.contentHint = o.contentHint
+          if (o.frameRate) Promise.resolve(t.applyConstraints({ frameRate: o.frameRate })).catch(function () {})
+          set('opts-applied', { scaleToWidth: o.scaleToWidth, videoBitrateMbps: o.videoBitrateMbps, degradationPreference: o.degradationPreference, contentHint: o.contentHint, frameRate: o.frameRate })
+        } catch (e) { set('opts-fail', { error: String((e && e.message) || e) }) }
+      }
+      set('send-params', { downScale, maxBitrate: params.encodings[0].maxBitrate, srcW })
+    } catch (e) { set('send-params-fail', { error: e.message }) }
+  })
+
+  // 优先 H.264：iPad/Safari 的 WebRTC 不支持 VP9，默认协商出 VP9 就会没画面
+  try {
+    const caps = RTCRtpSender.getCapabilities('video')
+    if (caps && caps.codecs) {
+      const h264 = caps.codecs.filter(c => /H264/i.test(c.mimeType))
+      const others = caps.codecs.filter(c => !/H264/i.test(c.mimeType))
+      if (h264.length) {
+        p.getTransceivers().forEach(tr => { try { tr.setCodecPreferences([...h264, ...others]) } catch {} })
+        set('codec-pref', { preferred: h264.map(c => c.mimeType + ' ' + (c.sdpFmtpLine || '')).slice(0, 2) })
+      }
+    }
+  } catch (e) { set('codec-pref-fail', { error: e.message }) }
+  return p
+}
+
+async function makeOffer () {
+  if (pc) { try { pc.close() } catch {} }
+  pc = newPeer()
+  const offer = await pc.createOffer()
+  await pc.setLocalDescription(offer)
+  // 必须等 ICE 收集完成再发 offer。
+  // 原因（踩过的坑）：手机端在 setRemoteDescription 之前收到的候选会被静默丢弃，
+  // 如果「立刻发 offer」就会变成双方都丢候选 → 永远卡在「连接中」。
+  // 后续会把两端都改成「缓存候选、settle 后回放」，那时才敢去掉这段等待。
+  await new Promise(resolve => {
+    if (pc.iceGatheringState === 'complete') return resolve()
+    pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === 'complete') resolve() }
+    setTimeout(resolve, 1200)
+  })
+  await post('/api/stream/signal', { role: 'host', msg: { type: 'offer', sdp: pc.localDescription.sdp } })
+  set('offer-sent', { tracks: stream.getTracks().map(t => t.kind) })
+}
+
+let failStreak = 0
+async function signalLoop () {
+  for (;;) {
+    // 连接阶段 250ms 快轮询（把握手从 ~3 秒压到 ~1 秒），连上后放宽到 900ms
+    const fast = !pc || pc.connectionState !== 'connected'
+    await sleep(fast ? 250 : 900)
+    try {
+      const r = await fetch(SERVER + '/api/stream/signal?role=host').then(x => x.json())
+      failStreak = 0
+      const st = stream || null
+      void st
+      for (const m of r.msgs || []) {
+        if (m.type === 'viewer-joined') { set('viewer-joined', { session: m.sessionId }); await makeOffer() }
+        else if (m.type === 'answer' && pc) { await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); set('answer-ok') }
+        else if (m.type === 'candidate' && pc) { try { await pc.addIceCandidate(m.candidate) } catch {} }
+        else if (m.type === 'viewer-left' || m.type === 'bye') { set('viewer-left'); if (pc) { try { pc.close() } catch {} pc = null } }
+      }
+      if (pc && pc.connectionState === 'connected') {
+        const s = await pc.getStats()
+        s.forEach(r => {
+          if (r.type === 'outbound-rtp' && r.kind === 'video' && r.framesEncoded) state.sent = { frames: r.framesEncoded, bytes: r.bytesSent, size: r.frameWidth + 'x' + r.frameHeight }
+          if (r.type === 'candidate-pair' && r.state === 'succeeded') state.rtt = r.currentRoundTripTime
+        })
+      }
+    } catch (e) {
+      // MoeShelf 不可达：连续失败约 8 次（≈7 秒）就自行退出，避免留下孤儿进程
+      failStreak += 1
+      if (failStreak === 8) { set('server-gone'); ipcRenderer.send('cap:quit', 'MoeShelf 已停止（连续心跳失败）'); return }
+    }
+  }
+}
+
+;(async () => {
+  set('boot')
+  const info = await ipcRenderer.invoke('cap:info')
+  if (info && info.server) SERVER = info.server
+  if (info && info.opts) state.opts = info.opts   // 手动质量设置（/stream/settings）
+  set('info', { window: info.windowName, game: info.game, server: SERVER })
+
+  set('gum-start')
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true })
+  } catch (e) { set('error', { where: 'getDisplayMedia', error: e.name + ': ' + e.message }); return }
+
+  const v = stream.getVideoTracks()[0]
+  const a = stream.getAudioTracks()[0] || null
+  if (!v) { set('error', { reason: '没有视频轨' }); return }
+
+  // 真实帧尺寸：desktopCapturer 的 getSettings() 报的是显示器尺寸，所以要抓一帧量一下。
+  // 量完立刻停止这个探针 video —— 否则它会一直解码，白吃性能。
+  let real = null
+  try {
+    const vid = document.createElement('video')
+    vid.srcObject = stream; vid.muted = true
+    await vid.play()
+    await sleep(600)
+    real = { width: vid.videoWidth, height: vid.videoHeight, aspect: vid.videoWidth && vid.videoHeight ? +(vid.videoWidth / vid.videoHeight).toFixed(4) : null }
+    vid.pause()
+    vid.srcObject = null
+    vid.remove()
+  } catch (e) { real = { error: e.message } }
+  set('stream-ready', { label: v.label, realFrame: real, audio: a ? a.label : null })
+
+  // 向 MoeShelf 注册为采集端（host）
+  const hello = await post('/api/stream/hello', {
+    role: 'host',
+    agent: 'Electron capture (' + info.windowName + ')',
+    game: info.game,
+    capture: {
+      width: real && real.width, height: real && real.height, frameRate: 30,
+      label: v.label, surface: 'window', windowTitle: info.windowName, audio: !!a,
+    },
+  })
+  set('hello-ok', { sessionId: hello.sessionId, viewer: hello.viewerOnline })
+  signalLoop()
+})().catch(e => set('error', { error: e.name + ': ' + e.message, stack: String(e.stack).slice(0, 200) }))
+</script>
+</body>

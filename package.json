@@ -1,6 +1,6 @@
 {
   "name": "moeshelf",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Galgame 本地图书馆 —— 像 Infuse 管理本地视频一样管理本地 Galgame 收藏，自动从网络刮削封面与元数据",
   "scripts": {
@@ -13,6 +13,7 @@
     "@types/qrcode-generator": "^1.0.6",
     "better-sqlite3": "^12.0.0",
     "cheerio": "1.0.0",
+    "koffi": "^3.2.1",
     "next": "14.2.35",
     "qrcode-generator": "^2.0.4",
     "react": "^18.3.1",
@@ -30,6 +31,7 @@
     "typescript": "^5.5.3"
   },
   "allowScripts": {
-    "better-sqlite3@12.11.1": true
+    "better-sqlite3@12.11.1": true,
+    "koffi": true
   }
 }

@@ -188,6 +188,7 @@ export const SETTINGS_GROUPS: { title: string; items: { key: string; icon: strin
     items: [
       { key: 'proxy', icon: 'external', label: '代理服务器' },
       { key: 'lan', icon: 'info', label: '局域网访问' },
+      { key: 'stream', icon: 'play', label: '手机串流' },
     ],
   },
   {

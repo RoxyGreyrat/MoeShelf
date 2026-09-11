@@ -1,0 +1,7 @@
+(node:25152) UnhandledPromiseRejectionWarning: Error: ERR_FAILED (-2) loading 'file:///E:/moeshelf-src/stream-capture/capture.html'
+    at rejectAndCleanup (node:electron/js2c/browser_init:2:99819)
+    at finishListener (node:electron/js2c/browser_init:2:99981)
+    at WebContents.stopLoadingListener (node:electron/js2c/browser_init:2:100368)
+    at WebContents.emit (node:events:526:24)
+(Use `electron --trace-warnings ...` to show where the warning was created)
+(node:25152) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). To terminate the node process on unhandled promise rejection, use the CLI flag `--unhandled-rejections=strict` (see https://nodejs.org/api/cli.html#cli_unhandled_rejections_mode). (rejection id: 1)

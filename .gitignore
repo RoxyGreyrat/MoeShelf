@@ -17,3 +17,6 @@ desktop/webapp
 # 个人一键脚本（仅本地使用，不入库）
 sync-to-github.bat
 release-to-github.bat
+
+# 手机串流采集端：Electron 运行时体积很大，不进 git（在 stream-capture 里 npm install 生成，打包时由 pack.js 带上）
+stream-capture/node_modules/

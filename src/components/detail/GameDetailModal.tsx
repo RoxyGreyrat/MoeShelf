@@ -930,7 +930,7 @@ export function GameDetailModal({
                   <span className="shrink-0 text-danger">{exeError}</span>
                 ) : !nd ? (
                   <button
-                    onClick={() => void scanExes()}
+                    onClick={() => { exeList ? setExeList(null) : void scanExes() }}
                     className="shrink-0 text-accent transition hover:underline"
                   >
                     {exeList ? '收起列表' : '更换'}

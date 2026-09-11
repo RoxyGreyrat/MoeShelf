@@ -1,0 +1,16 @@
+{
+  "name": "moeshelf-stream-capture",
+  "private": true,
+  "version": "1.0.0",
+  "description": "MoeShelf 手机串流采集端：零点击抓游戏窗口 + 系统回环音频，推给 MoeShelf 的串流服务",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^44.0.0"
+  },
+  "allowScripts": {
+    "electron": true
+  }
+}
