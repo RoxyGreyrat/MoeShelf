@@ -2,10 +2,10 @@
 
 // 由 page.tsx 拆分而来（行为与拆分前逐字一致，仅位置与导入变化）
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Icon } from '@/components/icons'
-import { SOURCE_LABELS, colorFor, idbGet, idbSave, type SearchCandidate } from '@/lib/ui-shared'
+import { SOURCE_LABELS, colorFor, idbDel, idbGet, idbSave, type SearchCandidate } from '@/lib/ui-shared'
 
 // ---------------------------------------------------------------------------
 
@@ -46,6 +46,7 @@ export function CoverImage({
 }) {
   const [state, setState] = useState(0) // 0=经服务端代理 1=直连 2=失败 3=IndexedDB 缓存
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const badBlobRef = useRef(0) // 缓存坏图次数：删缓存回退代理，最多两次防死循环
 
   useEffect(() => {
     let cancelled = false
@@ -93,7 +94,16 @@ export function CoverImage({
                   } else setState(2)
                 })
                 .catch(() => setState(2))
-            else if (state === 3) setState(2)
+            else if (state === 3) {
+              // 命中的缓存解不开（多半是早期把错误响应当图片存进去了）：
+              // 删掉这条缓存并回到代理重试，最多两次，避免坏图死循环
+              void idbDel(url)
+              setBlobUrl(null)
+              if (badBlobRef.current < 2) {
+                badBlobRef.current += 1
+                setState(0)
+              } else setState(2)
+            }
           }}
           className={
             fit === 'natural'

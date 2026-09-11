@@ -207,13 +207,22 @@ export async function GET(req: NextRequest) {
     const message = e instanceof Error ? e.message : String(e)
     return json({ ok: false, error: `刮削服务异常：${message}` }, { status: 500 })
   }
+  // 手动改过的中文简介不能被重新刮削覆盖：把带 manual 标记的那份合并回新数据
+  const prevData = ((await loadCacheGames())[cacheKey]?.data ?? null) as Record<string, unknown> | null
+  const manualCn =
+    prevData && prevData.cnDescriptionSource === 'manual'
+      ? { cnDescription: prevData.cnDescription, cnDescriptionSource: 'manual' }
+      : null
+  const mergedData: Record<string, unknown> = { ...((result.data as Record<string, unknown> | null) ?? {}) }
+  if (manualCn) Object.assign(mergedData, manualCn)
+
   const entry: CacheEntry = {
     key: cacheKey,
     name,
     scrapedAt: new Date().toISOString(),
     success: result.success,
     schema: 2,
-    data: result.data as ScrapedData | null,
+    data: Object.keys(mergedData).length ? (mergedData as ScrapedData) : null,
     folderPath: folderPath || undefined,
   }
   try {

@@ -10,6 +10,7 @@ import {
   ACT_GROUPS,
   ACT_SECTIONS,
   CANDIDATE_SOURCES,
+  DESC_SOURCES,
   SOURCE_LABELS,
   devName,
   displayTitle,
@@ -59,7 +60,7 @@ export function GameDetailModal({
   onSetTitle: (game: Game, title: string) => Promise<boolean>
   onSetDev: (game: Game, dev: string) => Promise<boolean>
   onCharacters?: (game: Game, characters: CharacterEntry[]) => void
-  onCnDescription?: (game: Game, description: string) => void
+  onCnDescription?: (game: Game, description: string, source?: string) => void
   onRelocate: (game: Game, path: string) => Promise<{ ok: boolean; title?: string; error?: string }>
   onSetWebCustom: (hash: string, patch: WebCustomPatch) => void
   onSetCompleted?: (hash: string, completed: boolean) => void
@@ -78,6 +79,8 @@ export function GameDetailModal({
   const [applyingId, setApplyingId] = useState<string | null>(null)
   const [coverList, setCoverList] = useState<CoverItem[] | null>(null)
   const [coverLoading, setCoverLoading] = useState(false)
+  const [coverSort, setCoverSort] = useState<'date' | 'res'>('date')
+  const [coverShowAll, setCoverShowAll] = useState(false)
   const [pathInp, setPathInp] = useState('')
   const [pathBusy, setPathBusy] = useState(false)
   const [pathMsg, setPathMsg] = useState('')
@@ -137,11 +140,17 @@ export function GameDetailModal({
   const dev = game ? devName(game) : undefined
   const ratingDisplay = metadata?.rating != null && metadata.rating > 0 ? (metadata.rating / 10).toFixed(2) : null
   const duration = formatDuration(game?.playtimeMinutes)
-  const description = metadata?.cnDescription
-    ? stripVndbTags(metadata.cnDescription)
-    : metadata?.description
-      ? stripVndbTags(metadata.description)
-      : ''
+  // 简介原文（用来填编辑框，别用裁剪过的显示版本，否则一编辑就把换行/方括号弄丢）
+  const rawDescription = metadata?.cnDescription ?? metadata?.description ?? ''
+  // 手动改过的简介原样显示；抓来的先去 VNDB 标签（保留换行）
+  const description =
+    metadata?.cnDescriptionSource === 'manual'
+      ? metadata?.cnDescription ?? ''
+      : metadata?.cnDescription
+        ? stripVndbTags(metadata.cnDescription)
+        : metadata?.description
+          ? stripVndbTags(metadata.description)
+          : ''
   const exeCandidates = game?.exeCandidates ?? []
   const currentExe = game ? game.selectedExe ?? exeCandidates[0]?.path ?? null : null
   const exeFileName = currentExe ? currentExe.split(/[\\/]/).pop() : null
@@ -214,7 +223,7 @@ export function GameDetailModal({
             `/api/cn-description?name=${encodeURIComponent(game.folderName)}&hash=${encodeURIComponent(game.pathHash)}&title=${encodeURIComponent(game.metadata?.title ?? '')}`,
           )
           const json = await resp.json()
-          if (json.ok) onCnDescription?.(game, json.description ?? '')
+          if (json.ok) onCnDescription?.(game, json.description ?? '', json.source ?? undefined)
         } catch (e) {}
         cnFetchRef.current = null
       })()
@@ -332,6 +341,18 @@ export function GameDetailModal({
     await handleSetCover(v, url)
   }
 
+  // 封面列表排序：最新发行（接口默认顺序）/ 最高分辨率
+  const coversSorted: CoverItem[] = (() => {
+    const list = coverList ?? []
+    if (coverSort === 'date') return list
+    return [...list].sort(
+      (a, b) =>
+        (b.dims?.[0] ?? 0) * (b.dims?.[1] ?? 0) - (a.dims?.[0] ?? 0) * (a.dims?.[1] ?? 0),
+    )
+  })()
+  const COVER_PREVIEW_N = 6
+  const coversShown = coverShowAll ? coversSorted : coversSorted.slice(0, COVER_PREVIEW_N)
+
   const applyCoverUrl = async () => {
     const url = coverUrlInput.trim()
     if (!/^https?:\/\//i.test(url)) {
@@ -427,6 +448,91 @@ export function GameDetailModal({
   }
 
   const [detailTab, setDetailTab] = useState<'intro' | 'characters'>('intro')
+  // 简介折叠：默认只显示 14 行，避免长简介把弹窗顶到高度上限、左栏留一大片空白
+  const [descOpen, setDescOpen] = useState(false)
+  const [descOverflow, setDescOverflow] = useState(false)
+  const descRef = useRef<HTMLParagraphElement>(null)
+  // 简介：手动编辑 + 手动指定来源
+  const [descEditing, setDescEditing] = useState(false)
+  const [descDraft, setDescDraft] = useState('')
+  const [descSourceMenu, setDescSourceMenu] = useState(false)
+  const [descBusy, setDescBusy] = useState(false)
+  // 换游戏时收起 / 退出编辑
+  useEffect(() => {
+    setDescOpen(false)
+    setDescEditing(false)
+    setDescSourceMenu(false)
+    setCoverShowAll(false)
+    setCoverSort('date')
+  }, [game?.pathHash])
+  // 折叠态下量一次是否真的溢出，只有真的溢出才挂「展开全部」
+  useEffect(() => {
+    if (descOpen || descEditing || detailTab !== 'intro') return
+    const el = descRef.current
+    if (!el) return
+    const id = window.requestAnimationFrame(() => setDescOverflow(el.scrollHeight > el.clientHeight + 1))
+    return () => window.cancelAnimationFrame(id)
+  }, [description, descOpen, descEditing, detailTab])
+
+  const descSource = metadata?.cnDescriptionSource
+  const descSourceLabel =
+    descSource === 'manual' ? '手动' : descSource ? SOURCE_LABELS[descSource] ?? descSource : '自动'
+
+  /** 保存手动编辑的简介（source='manual'，重新刮削不会覆盖） */
+  const saveCnDescription = async () => {
+    if (!game) return
+    setDescBusy(true)
+    try {
+      const text = descDraft.trim()
+      const resp = await fetch('/api/cn-description', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: game.folderName, hash: game.pathHash, description: text, source: 'manual' }),
+      })
+      const json = await resp.json().catch(() => null)
+      if (!resp.ok || !json?.ok) throw new Error(json?.error ?? '保存失败')
+      onCnDescription?.(game, text, 'manual')
+      setDescEditing(false)
+      push(text ? '简介已保存（标记为手动，重新刮削不会覆盖）' : '已清空简介', 'success')
+    } catch (e) {
+      push(e instanceof Error ? e.message : '保存失败', 'error')
+    } finally {
+      setDescBusy(false)
+    }
+  }
+
+  /** 手动指定来源重新抓取；source 为空 = 走自动顺序 */
+  const refetchCnDescription = async (source: '' | (typeof DESC_SOURCES)[number]) => {
+    if (!game) return
+    setDescSourceMenu(false)
+    setDescBusy(true)
+    try {
+      const qs = new URLSearchParams({
+        name: game.folderName,
+        hash: game.pathHash,
+        title: game.metadata?.title ?? '',
+      })
+      if (source) qs.set('source', source)
+      else qs.set('force', '1')
+      const resp = await fetch(`/api/cn-description?${qs.toString()}`)
+      const json = await resp.json().catch(() => null)
+      if (!json?.ok) throw new Error(json?.error ?? '获取失败')
+      if (!json.description) {
+        push(
+          source ? `${SOURCE_LABELS[source] ?? source} 没有取到中文简介，已保留原内容` : '没有取到中文简介',
+          'info',
+        )
+        return
+      }
+      const hit = typeof json.source === 'string' && json.source ? json.source : source || undefined
+      onCnDescription?.(game, json.description, hit)
+      push(`简介已更新（${hit ? SOURCE_LABELS[hit] ?? hit : '自动'}）`, 'success')
+    } catch (e) {
+      push(e instanceof Error ? e.message : '获取失败', 'error')
+    } finally {
+      setDescBusy(false)
+    }
+  }
 
   const infoChips = (
     <>
@@ -534,7 +640,7 @@ export function GameDetailModal({
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
           {/* ③B：左栏只保留封面 + 关键信息（路径与启动文件已移到右栏），不再需要下滑 */}
-          <div className="min-h-0 shrink-0 overflow-y-auto border-hairline p-4 md:w-[22rem] md:self-start md:border-r">
+          <div className="flex min-h-0 shrink-0 flex-col overflow-y-auto border-hairline p-4 md:w-[22rem] md:self-stretch md:border-r">
             <div className="relative mx-auto w-full max-w-[16rem] overflow-hidden radius-lg bg-surface-3">
               {coverUrl ? (
                 <CoverImage
@@ -577,8 +683,8 @@ export function GameDetailModal({
               )}
             </div>
 
-            {/* 关键信息：评分 / 厂商 / 发售日 / 时长 / 游玩次数 */}
-            <div className="mt-3 grid grid-cols-2 gap-1.5">
+            {/* 关键信息：评分 / 厂商 / 发售日 / 时长 / 游玩次数（mt-auto：贴到左栏底部，把多余高度让成中间留白） */}
+            <div className="mt-auto grid grid-cols-2 gap-1.5 pt-4">
               <div className="panel-flat px-2.5 py-2">
                 <p className="text-[0.6875rem] text-quaternary">评分</p>
                 <p className="mt-0.5 truncate text-[0.875rem] font-semibold text-warn" title={metadata?.votecount ? `${metadata.votecount.toLocaleString()} 票` : ''}>
@@ -641,6 +747,65 @@ export function GameDetailModal({
                   ) : null}
                 </button>
               </span>
+              {/* 简介：手动选源 + 手动编辑（铅笔）。只在「简介」页签出现 */}
+              {detailTab === 'intro' && (
+                <div className="relative flex items-center gap-1">
+                  <button
+                    onClick={() => setDescSourceMenu(v => !v)}
+                    disabled={descBusy}
+                    title="选择中文简介的来源（会重新抓取）"
+                    className="btn btn-sm btn-soft gap-1 px-2 text-[0.75rem]"
+                  >
+                    {descSourceLabel}
+                    {descBusy ? (
+                      <Spinner className="h-3 w-3" />
+                    ) : (
+                      <Icon name="down" className="h-3 w-3" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (descEditing) {
+                        setDescEditing(false)
+                        return
+                      }
+                      setDescDraft(rawDescription)
+                      setDescEditing(true)
+                    }}
+                    disabled={descBusy}
+                    title={descEditing ? '取消编辑' : '手动修改简介'}
+                    aria-label={descEditing ? '取消编辑' : '手动修改简介'}
+                    className="icon-btn h-7 w-7"
+                  >
+                    <Icon name={descEditing ? 'x' : 'pencil'} className="h-3.5 w-3.5" />
+                  </button>
+                  {descSourceMenu && (
+                    <>
+                      <div className="fixed inset-0 z-[1]" onClick={() => setDescSourceMenu(false)} />
+                      <div className="absolute left-0 top-8 z-[2] w-52 overflow-hidden radius-md border border-strong bg-surface-1 py-1 shadow-token-lg">
+                        <button
+                          onClick={() => void refetchCnDescription('')}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-[0.8125rem] text-secondary transition hover:bg-hoverable hover:text-primary"
+                        >
+                          自动（推荐顺序）
+                          {!descSource ? <Icon name="check" className="ml-auto h-3.5 w-3.5 text-accent" /> : null}
+                        </button>
+                        <div className="my-1 h-px bg-hairline" />
+                        {DESC_SOURCES.map(s => (
+                          <button
+                            key={s}
+                            onClick={() => void refetchCnDescription(s)}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[0.8125rem] text-secondary transition hover:bg-hoverable hover:text-primary"
+                          >
+                            {SOURCE_LABELS[s] ?? s}
+                            {descSource === s ? <Icon name="check" className="ml-auto h-3.5 w-3.5 text-accent" /> : null}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               {metadata?.vndbUrl && (
                 <a
                   href={metadata.vndbUrl}
@@ -655,8 +820,44 @@ export function GameDetailModal({
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
               {detailTab === 'intro' ? (
-                description ? (
-                  <p className="prose-cn whitespace-pre-line">{description}</p>
+                descEditing ? (
+                  <div className="flex h-full min-h-0 flex-col gap-2">
+                    <textarea
+                      value={descDraft}
+                      onChange={e => setDescDraft(e.target.value)}
+                      placeholder="粘贴或撰写简介…"
+                      spellCheck={false}
+                      className="min-h-0 w-full flex-1 resize-none radius-md border border-strong bg-sunken px-3 py-2 text-[0.9375rem] leading-relaxed text-primary outline-none transition focus:border-accent-soft"
+                    />
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <button onClick={() => void saveCnDescription()} disabled={descBusy} className="btn btn-sm btn-primary">
+                        {descBusy ? <Spinner className="h-3.5 w-3.5" /> : null}
+                        保存
+                      </button>
+                      <button onClick={() => setDescEditing(false)} disabled={descBusy} className="btn btn-sm btn-soft">
+                        取消
+                      </button>
+                      <span className="text-[0.75rem] text-quaternary">保存后标记为「手动」，重新刮削不会覆盖</span>
+                    </div>
+                  </div>
+                ) : description ? (
+                  <>
+                    {/* 折叠行数写死在类名里：Tailwind 只能扫描到字面量，不能拼字符串 */}
+                    <p
+                      ref={descRef}
+                      className={`prose-cn whitespace-pre-line ${descOpen ? '' : 'line-clamp-[14]'}`}
+                    >
+                      {description}
+                    </p>
+                    {descOverflow || descOpen ? (
+                      <button
+                        onClick={() => setDescOpen(v => !v)}
+                        className="mt-2 text-[0.8125rem] font-medium text-accent transition hover:underline"
+                      >
+                        {descOpen ? '收起' : '展开全部'}
+                      </button>
+                    ) : null}
+                  </>
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-center">
                     <p className="text-[0.9375rem] text-tertiary">暂无简介</p>
@@ -863,11 +1064,24 @@ export function GameDetailModal({
                 {!collapsed.has('cover') && (
                   <div className="mt-1.5 panel-flat p-2.5">
                     {coverLoading ? (
-                      <div className="flex items-center justify-center gap-2 py-3 text-[0.8125rem] text-tertiary">
-                        <Spinner className="h-3.5 w-3.5" /> 正在加载封面列表…
+                      <div>
+                        <p className="pb-2 text-[0.75rem] text-tertiary">正在加载封面列表…</p>
+                        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i}>
+                              <div className="aspect-[3/4] w-full animate-pulse radius-md bg-surface-3" />
+                              <div className="mt-1 h-3 w-2/3 animate-pulse radius-xs bg-surface-3" />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : coverError ? (
-                      <p className="py-1 text-[0.8125rem] text-danger">{coverError}</p>
+                      <div className="flex items-center gap-2 py-1">
+                        <p className="min-w-0 flex-1 text-[0.8125rem] text-danger">{coverError}</p>
+                        <button onClick={() => void loadCovers()} className="btn btn-sm btn-soft shrink-0">
+                          重试
+                        </button>
+                      </div>
                     ) : metadata?.vndbId ? (
                       coverList === null ? (
                         <button
@@ -879,27 +1093,83 @@ export function GameDetailModal({
                       ) : coverList.length === 0 ? (
                         <p className="py-1 text-[0.8125rem] text-quaternary">该游戏没有其他封面</p>
                       ) : (
-                        <div className="grid max-h-44 grid-cols-4 gap-2 overflow-y-auto">
-                          {coverList.map((c, i) => {
-                            const current = (v.customCover ?? coverUrl) === c.url || c.isCurrent === true
-                            return (
+                        <div>
+                          {/* 工具条：数量 + 排序 */}
+                          <div className="flex flex-wrap items-center gap-2 pb-2">
+                            <span className="text-[0.75rem] text-quaternary">
+                              共 {coverList.length} 张
+                              {coverList.length > COVER_PREVIEW_N && !coverShowAll
+                                ? ` · 先显示 ${COVER_PREVIEW_N} 张`
+                                : ''}
+                            </span>
+                            <span className="segment ml-auto">
                               <button
-                                key={i}
-                                onClick={() => void pickCover(c.url)}
-                                className={`relative aspect-[3/4] overflow-hidden radius-sm bg-surface-3 transition ${
-                                  current ? 'ring-2 ring-emerald-400' : 'hover:ring-1 hover:ring-white/30'
-                                }`}
-                                title={`${c.released ?? ''} ${c.relTitle ?? ''}`}
+                                onClick={() => setCoverSort('date')}
+                                className={`segment-item ${coverSort === 'date' ? 'segment-item-active' : ''}`}
                               >
-                                <CoverImage url={c.url} alt={title} />
-                                {current && (
-                                  <span className="absolute left-1 top-1 rounded bg-success px-1 py-0.5 text-[0.6875rem] text-on-overlay">
-                                    当前
-                                  </span>
-                                )}
+                                最新发行
                               </button>
-                            )
-                          })}
+                              <button
+                                onClick={() => setCoverSort('res')}
+                                className={`segment-item ${coverSort === 'res' ? 'segment-item-active' : ''}`}
+                              >
+                                最高分辨率
+                              </button>
+                            </span>
+                          </div>
+                          {/* 网格：跟随弹窗自身滚动，不再套一层 max-h 滚动区 */}
+                          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                            {coversShown.map(c => {
+                              const current = (v.customCover ?? coverUrl) === c.url || c.isCurrent === true
+                              const res = c.dims ? `${c.dims[0]}×${c.dims[1]}` : '尺寸未知'
+                              const date = c.released && c.released !== 'TBA' ? c.released : '发行日未定'
+                              return (
+                                <button
+                                  key={c.url}
+                                  onClick={() => void pickCover(c.url)}
+                                  title={`${date} ${c.relTitle ?? ''}`.trim()}
+                                  className="group/cv min-w-0 text-left"
+                                >
+                                  <span
+                                    className={`relative block aspect-[3/4] w-full overflow-hidden radius-md bg-surface-3 transition ${
+                                      current
+                                        ? 'shadow-[inset_0_0_0_2px_var(--success)]'
+                                        : 'group-hover/cv:shadow-[inset_0_0_0_1px_var(--line-1)]'
+                                    }`}
+                                  >
+                                    {/* 兜底：图没加载出来时显示占位，而不是一个黑洞 */}
+                                    <CoverPlaceholder name={title} />
+                                    <CoverImage url={c.url} alt={title} />
+                                    {current && (
+                                      <span className="absolute left-1.5 top-1.5 radius-xs bg-success px-1.5 py-0.5 text-[0.6875rem] font-medium text-on-overlay shadow-token-xs">
+                                        当前
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="mt-1 block truncate text-[0.75rem] text-tertiary" title={res}>
+                                    <span className={current ? 'font-medium text-success' : ''}>{res}</span>
+                                    <span className="text-quaternary"> · {date}</span>
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                          {!coverShowAll && coversSorted.length > COVER_PREVIEW_N && (
+                            <button
+                              onClick={() => setCoverShowAll(true)}
+                              className="btn btn-sm btn-soft mt-2.5 w-full"
+                            >
+                              显示全部 {coversSorted.length} 张
+                            </button>
+                          )}
+                          {coverShowAll && coversSorted.length > COVER_PREVIEW_N && (
+                            <button
+                              onClick={() => setCoverShowAll(false)}
+                              className="btn btn-sm btn-ghost mt-2.5 w-full border-0"
+                            >
+                              收起
+                            </button>
+                          )}
                         </div>
                       )
                     ) : (

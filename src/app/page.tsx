@@ -1111,8 +1111,16 @@ function useLibrary() {
   )
 
   const setCnDescription = useCallback(
-    (game: Game, description: string) => {
-      if (game.metadata) patchGame(game.pathHash, { metadata: { ...game.metadata, cnDescription: description } })
+    (game: Game, description: string, source?: string) => {
+      if (game.metadata) {
+        patchGame(game.pathHash, {
+          metadata: {
+            ...game.metadata,
+            cnDescription: description,
+            ...(source ? { cnDescriptionSource: source } : {}),
+          },
+        })
+      }
     },
     [patchGame],
   )

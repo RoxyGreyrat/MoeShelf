@@ -189,7 +189,7 @@ export async function getVndbCharacters(vndbId: string): Promise<CharacterEntry[
 /** 模块 4021 rp：按 vndbId 取全部发行封面（去重） */
 export async function getVndbCovers(
   vndbId: string
-): Promise<Array<{ url: string; released?: string; relTitle?: string }>> {
+): Promise<Array<{ url: string; released?: string; relTitle?: string; dims?: [number, number] }>> {
   try {
     const res = await fetchWithProxy(
       `${VNDB_API}/release`,
@@ -202,7 +202,7 @@ export async function getVndbCovers(
         },
         body: JSON.stringify({
           filters: ['vn', '=', ['id', '=', vndbId]],
-          fields: 'id, title, released, images.url',
+          fields: 'id, title, released, images.url, images.dims',
           sort: 'released',
           reverse: true,
           results: 100,
@@ -213,12 +213,18 @@ export async function getVndbCovers(
     if (!res.ok) return []
     const json = await res.json().catch(() => null)
     const seen = new Set<string>()
-    const covers: Array<{ url: string; released?: string; relTitle?: string }> = []
+    const covers: Array<{ url: string; released?: string; relTitle?: string; dims?: [number, number] }> = []
     for (const release of json?.results ?? []) {
       for (const image of release.images ?? []) {
         if (!image.url || seen.has(image.url)) continue
         seen.add(image.url)
-        covers.push({ url: image.url, released: release.released, relTitle: release.title })
+        // VNDB 的 dims 是 [宽, 高]，只接受两个数字，异常值丢掉
+        const d = image.dims
+        const dims =
+          Array.isArray(d) && d.length === 2 && typeof d[0] === 'number' && typeof d[1] === 'number'
+            ? ([d[0], d[1]] as [number, number])
+            : undefined
+        covers.push({ url: image.url, released: release.released, relTitle: release.title, dims })
       }
     }
     return covers

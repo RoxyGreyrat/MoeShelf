@@ -31,6 +31,8 @@ export interface GameMetadata {
   developers?: string[]
   description?: string
   cnDescription?: string
+  /** 中文简介来源：moyu / cngal / ymgal / bangumi；manual = 用户手动编辑（重新刮削不会覆盖） */
+  cnDescriptionSource?: string
   vndbId?: string
   vndbUrl?: string
   source?: string
@@ -82,6 +84,8 @@ export interface CoverItem {
   released?: string
   relTitle?: string
   isCurrent?: boolean
+  /** VNDB 返回的图片尺寸 [宽, 高]，用于列表里标注分辨率 */
+  dims?: [number, number]
 }
 
 export interface ExeItem {
@@ -122,6 +126,9 @@ export const SOURCE_LABELS: Record<string, string> = {
 }
 
 export const CANDIDATE_SOURCES = ['vndb', 'bangumi', 'ymgal', 'cngal', 'moyu']
+
+/** 中文简介可手动指定的源；顺序即自动模式的优先顺序 */
+export const DESC_SOURCES = ['moyu', 'cngal', 'ymgal', 'bangumi'] as const
 
 // 卡片网格：每页挂载数量 + 密度档位标签（最小卡宽走 CSS 变量 --density-min）
 export const PAGE_STEP = 60
@@ -227,9 +234,20 @@ export function toastProxyFallback(push: (message: string, type?: 'success' | 'e
 // ---------------------------------------------------------------------------
 
 /** VNDB 标签形如 "g123"、"g123.4"、"g123 (minor)" —— 只保留文本部分 */
+/**
+ * 去掉 VNDB 简介里的 [xxx] 标签并规整空白 —— 但**保留换行**。
+ * 简介是多段文本（缓存里 306 条有 194 条带 \n），早先把 \s+ 一律压成空格，
+ * 结果分段全被吃掉、p 上的 whitespace-pre-line 形同虚设。
+ */
 export function stripVndbTags(text?: string | null): string {
   if (!text) return ''
-  return text.replace(/\[[^\]]*\]/g, '').replace(/\s+/g, ' ').trim()
+  return text
+    .replace(/\r\n?/g, '\n') // 统一换行符
+    .replace(/\[[^\]]*\]/g, '') // 去 [From ...] 之类标签
+    .replace(/[^\S\n]+/g, ' ') // 行内空白（含全角空格）压成单个空格，不动换行
+    .replace(/ *\n */g, '\n') // 去掉每行首尾空格
+    .replace(/\n{3,}/g, '\n\n') // 连续空行最多留一个
+    .trim()
 }
 
 /** "2018-04-27" → "2018-04-27"；只有年份时原样返回 */
@@ -411,9 +429,40 @@ export function idbPut(key: string, value: Blob): Promise<void> {
   })
 }
 
+/** 删除一条封面缓存（命中坏图时清掉，避免一直显示加载失败） */
+export function idbDel(key: string): Promise<void> {
+  return new Promise(res => {
+    try {
+      const q = indexedDB.open('gl-img', 1)
+      q.onupgradeneeded = () => {
+        q.result.createObjectStore('i')
+      }
+      q.onsuccess = () => {
+        const tr = q.result.transaction('i', 'readwrite')
+        tr.objectStore('i').delete(key)
+        tr.oncomplete = () => res()
+        tr.onerror = () => res()
+      }
+      q.onerror = () => res()
+    } catch (e) {
+      res()
+    }
+  })
+}
+
+/**
+ * 把封面写进 IndexedDB。
+ * 必须校验响应：代理限流/超时时会返回 500 的 HTML，早先的实现会把这段错误页当图片存进去，
+ * 之后该封面每次都解码失败（表现为「偶尔变成加载失败、重试一次好、下次又坏」）。
+ */
 export function idbSave(url: string, cacheKey: string) {
   fetch(url)
-    .then(r => r.blob())
-    .then(b => idbPut(cacheKey, b))
+    .then(r => {
+      if (!r.ok) throw new Error('bad status ' + r.status)
+      const type = r.headers.get('content-type') ?? ''
+      if (!type.startsWith('image/')) throw new Error('not an image: ' + type)
+      return r.blob()
+    })
+    .then(b => (b.size > 0 ? idbPut(cacheKey, b) : undefined))
     .catch(() => {})
 }
