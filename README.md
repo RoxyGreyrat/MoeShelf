@@ -1,4 +1,8 @@
 [![Made with DeepSeek V4 Flash](https://img.shields.io/badge/Made%20with-DeepSeek%20V4%20Flash-536DFE?style=flat-square\&logo=deepseek\&logoColor=white)](https://deepseek.com)
+[![Release](https://img.shields.io/github/v/release/RoxyGreyrat/MoeShelf?style=flat-square\&color=536DFE)](https://github.com/RoxyGreyrat/MoeShelf/releases)
+[![License](https://img.shields.io/github/license/RoxyGreyrat/MoeShelf?style=flat-square)](LICENSE)
+[![Node](https://img.shields.io/badge/Node.js-%E2%89%A5%2020-339933?style=flat-square\&logo=nodedotjs\&logoColor=white)](#环境要求)
+[![Platform](https://img.shields.io/badge/Release-Windows%20x64-0078D6?style=flat-square)](#5-分钟上手)
 
 <p align="center">
   <img src="docs/screenshots/icon.png" width="180" alt="MoeShelf">
@@ -14,6 +18,11 @@
 
 自动扫描 · 多源刮削 · 中文信息 · 游玩记录 · 局域网访问
 
+**[下载最新版](https://github.com/RoxyGreyrat/MoeShelf/releases/latest)** ·
+**[使用教程](docs/使用教程.md)** ·
+[更新日志](更新日志.md) ·
+[反馈问题](https://github.com/RoxyGreyrat/MoeShelf/issues)
+
 当前版本：`v1.7.0`
 
 ---
@@ -24,6 +33,83 @@
   <img src="docs/screenshots/example.png" alt="MoeShelf 主界面" width="900">
 </p>
 
+---
+
+## 目录
+
+- [5 分钟上手](#5-分钟上手)
+- [功能](#功能)
+- [从源码运行](#从源码运行)
+- [桌面版 exe](#桌面版-exe)
+- [数据与隐私](#数据与隐私)
+- [数据源说明](#数据源说明)
+- [已知问题](#已知问题)
+- [常见问题 FAQ](#常见问题-faq)
+- [项目结构](#项目结构)
+- [致谢](#致谢)
+- [免责声明](#免责声明)
+- [许可证](#许可证)
+
+---
+
+## 5 分钟上手
+
+### 1. 下载
+
+到 [Releases](https://github.com/RoxyGreyrat/MoeShelf/releases/latest) 下载
+`Moeshelf-<版本>-windows-x64.zip`，解压到一个固定的短路径，例如 `D:\MoeShelf\`。
+
+压缩包里**已包含全部依赖**，不需要 `npm install`，也不需要联网安装东西。
+
+### 2. 前提：电脑上要有 Node.js（20 或更高）
+
+MoeShelf 是「浏览器界面 + 本机 Node 服务端」的结构，所以 **Node.js 是唯一的外部依赖，没有它程序起不来**。
+
+先在命令行确认一下（`Win + R` → `cmd`）：
+
+```bat
+node -v
+```
+
+- 打印 `v20.x` / `v22.x` / `v24.x` 之类 → 已就绪，跳到第 3 步
+- 提示「不是内部或外部命令」或版本低于 20 → 去 <https://nodejs.org/zh-cn> 下载 **LTS 的 Windows 安装包 (.msi)**，一路下一步（**保持勾选 `Add to PATH`**），装完**重开一个命令行窗口**再验证
+
+> **电脑上没有运行环境、公司电脑不给装软件、没有管理员权限**——都有对应做法：
+> **请直接看 [使用教程 · 第 1 章](docs/使用教程.md#第-1-章--电脑上没有-node-运行环境怎么办重点)**，
+> 里面写了免安装（zip 版 Node）怎么配、装完命令不认怎么修、以及常见坑的排查表。
+
+### 3. 启动
+
+双击 **`启动.bat`**（或 `MoeShelf.exe`），会弹出一个黑色命令行窗口并自动打开浏览器：
+
+```text
+URL: http://localhost:3000
+Phone access (same WiFi): http://192.168.1.64:3000
+Press Ctrl+C to stop the server
+```
+
+浏览器没自动打开就手动访问 `http://localhost:3000`。
+
+> ⚠️ **黑窗口 = 程序本身，别关它。** 关掉窗口浏览器页面就打不开了；想再次使用重新双击 `启动.bat`。
+> 3000 端口被占用时会自动改用 3001~3019，**以黑窗口打印的 URL 为准**。
+
+### 4. 扫描游戏
+
+点顶栏设置图标 → 在「**游戏根目录**」里选择你的游戏目录 → **保存并扫描**。
+
+MoeShelf 把该目录下的**每个一级子文件夹**当作一个游戏：
+
+```text
+D:\Galgame\                 ← 把这个目录填进设置
+├── 9-nine-新章\             ← 一个游戏（自动识别主程序 exe）
+├── 夏日口袋REFLECTION BLUE\  ← 一个游戏
+└── ...
+```
+
+扫描完成后卡片会自动向 VNDB / Bangumi / YMgal / CnGal / Moyu 刮削封面与中文信息。
+
+**更多细节**（首次启动、刮削与手动修正、换封面、通关标记、手机访问、数据迁移、故障排查）
+→ **[详细使用教程](docs/使用教程.md)**
 
 ---
 
@@ -33,39 +119,30 @@
 
 * 自动扫描游戏目录，识别文件夹与可执行文件
 * 智能选择主程序，自动排除安装程序、卸载器、运行库等无关文件
-* 支持收藏、置顶、已通关标记
-* 支持按通关时间查看游戏
-* 自动统计游玩时长
+* 支持收藏、置顶、已通关标记（已通关卡片右上角显示金色折角缎带）
+* 支持按通关时间查看游戏，自动统计游玩时长
+* 三档卡片密度（紧凑 / 舒适 / 大图）、搜索与厂商筛选
 
 ### 多源自动刮削
 
-支持 VNDB、Bangumi、YMgal、CnGal、Moyu 五个数据源。
+支持 **VNDB、Bangumi、YMgal、CnGal、Moyu** 五个数据源（各自提供什么见[数据源说明](#数据源说明)），
+支持全源并行搜索、相似度校验与手动修正，降低错误匹配概率。
 
-| 数据源     | 主要内容            |
-| ------- | --------------- |
-| VNDB    | 封面、标题、发售日、评分、会社 |
-| Bangumi | 中文标题、简介、角色、声优   |
-| YMgal   | 中文标题、简介、角色      |
-| CnGal   | 中文标题、简介、角色      |
-| Moyu    | 中文名、多语言简介、剧情简介  |
+### 中文信息（1.7.0 增强）
 
-支持全源并行搜索、相似度校验和手动修正，降低错误匹配概率。
-
-### 中文信息
-
-* 优先显示中文标题
-* 自动获取中文简介
+* 优先显示中文标题，自动获取中文简介
 * 简介按 `Moyu → CnGal → YMgal → Bangumi` 顺序回退
+* **可手动指定简介来源**：在简介旁的下拉里选定某一个源重新抓取；该源没有内容时保留原简介并提示
+* **可手动编辑简介**：点简介旁的铅笔图标行内编辑；保存后标记为「手动」，**重新刮削不会覆盖**
+* 长简介默认折叠 14 行，可展开查看全文
 * 自动获取角色、声优及角色立绘
 
 ### 封面与内容分级
 
-* 在线更换游戏封面
-* 图片经过服务端代理并缓存到本地
-* 支持浏览器 IndexedDB 缓存
-* 缓存后可离线查看
-* 根据 VNDB 封面分级处理 R18 封面
-* 支持全局或单个游戏设置 NSFW 显示
+* 在线更换封面：拉取 VNDB 各发行版封面，标注**分辨率 · 发行日**，支持「最新发行 / 最高分辨率」排序
+* 图片经服务端代理并缓存到本地，浏览器侧二次缓存，缓存后离线可看
+* 缓存写入前校验响应，坏缓存会自动清除并重新下载（不会一直卡在「加载失败」）
+* 根据 VNDB 封面分级处理 R18 封面，支持全局或单个游戏设置 NSFW 显示
 
 ### 游戏库与数据管理
 
@@ -73,45 +150,21 @@
 * 缓存异常时自动重新获取数据
 * 数据存储于 SQLite（`data/moeshelf.db`），旧版 JSON 首启自动无损迁移并备份
 * 自动备份，保留最近 5 份（数据库一致性副本）
-* 支持 JSON 导入 / 导出（与旧版格式兼容）
-* 支持 CSV 导出
-* 游戏库升级时可保留 `data/` 目录，实现无损迁移
+* 支持 JSON 导入 / 导出（与旧版格式兼容）与 CSV 导出
+* 升级时保留 `data/` 目录即可无损迁移；也可在设置里把数据目录改到别处
 
 ### 界面与主题
 
-* 顶栏 🌙/☀ 一键切换亮 / 暗主题，首次默认跟随系统并记忆选择；切换瞬间禁用过渡，无卡顿
-* 亮色为直接重绘：**封面/图片不做任何滤镜**，文字分级柔和深灰、选中与强调色加深，彩色按钮文字保持白色
-* 桌面窗口默认 1560×940（最小 1320×760），大窗口内容自动加宽，右栏不因窗口过小而消失
-* 游玩时长以发光翠绿时钟标识，卡片与详情一目了然
+* 顶栏图标一键切换亮 / 暗主题，首次默认跟随系统并记忆选择
+* 亮色为直接重绘：**封面/图片不做任何滤镜**，文字分级柔和深灰、选中与强调色加深
+* 界面缩放可调（4K 屏建议 125% 以上），缩放会同时放大文字与间距
+* 游玩时长以翠绿时钟徽章标识，卡片与详情一目了然
 
 ### 局域网访问
 
-* 内置代理设置
-* 代理失败后自动尝试直连
-* 一键开启局域网访问
-* 手机与电脑连接同一 Wi-Fi 即可访问
-* 支持 PWA / 移动端
-
----
-
-## 快速开始
-
-### 使用发布版
-
-1. 前往 GitHub Releases 下载最新版本
-2. 解压后双击 **`MoeShelf.exe`**（或 `启动.bat`）
-3. 浏览器会自动打开 `http://localhost:3000`
-4. 在「设置」中选择游戏根目录
-5. 点击「扫描」
-6. 等待程序自动获取游戏信息
-
-### 手机访问
-
-电脑与手机连接到同一个 Wi-Fi 后：
-
-1. 双击 `开启局域网访问.bat`
-2. 根据提示获取局域网地址
-3. 在手机浏览器打开该地址
+* 内置代理设置，代理失败后自动尝试直连
+* 一键添加防火墙规则开启局域网访问（`开启局域网访问.bat`，需管理员）
+* 手机与电脑连同一 Wi-Fi 即可访问，支持 PWA / 移动端
 
 ---
 
@@ -119,8 +172,10 @@
 
 ### 环境要求
 
-* Node.js ≥ 18.17
-* 推荐 Node.js 20+
+* **Node.js ≥ 20**（`better-sqlite3` 的原生模块要求 20 及以上；20 / 22 / 24 LTS 均可）
+* Git（可选，也可以直接下载源码压缩包）
+
+> 注意：Node 18 及更低版本**无法安装**本项目依赖（`better-sqlite3@12` 的 `engines` 为 `20.x || 22.x || 23.x || 24.x || 25.x || 26.x`）。
 
 ### 安装与开发
 
@@ -129,11 +184,7 @@ npm install
 npm run dev
 ```
 
-开发服务器默认运行于：
-
-```text
-http://localhost:3000
-```
+开发服务器默认运行于 `http://localhost:3000`。
 
 ### 生产构建
 
@@ -148,40 +199,49 @@ npm start
 node pack.js <目标目录>
 ```
 
-`pack.js` 会自动组装发布目录，包括：
+`pack.js` 会自动组装出与正式发布版相同结构的「解压即用」目录：
 
 ```text
 server.js
 node_modules/
 .next/
-启动脚本
-data/
+启动脚本（启动.bat / MoeShelf.exe / 开启局域网访问.bat）
+README.md / 更新日志.md / LICENSE
 ```
 
-生成与正式发布版相同结构的「解压即用」目录。
+数据库自检：`npm run verify:sqlite`
 
-### 桌面版（Windows exe，无需浏览器）
+---
 
-`desktop/` 提供 Electron 桌面壳：内置 Next 服务端与自带窗口渲染同一套界面，**双击 exe 即用——不需要安装 Node.js，也不会调用系统浏览器**。
+## 桌面版 exe
 
-- 代码仓库已配置 GitHub Actions（`.github/workflows/desktop-build.yml`）：
-  - 推送形如 `v1.6.1` 的标签，或在 Actions 页手动运行 `Desktop exe (Windows)`，即自动产出 `MoeShelf-<版本>-win-x64.exe` 并挂到 Release；
-  - 也可本地构建（需要能联网安装依赖）：
-    ```bash
-    npm run build
-    node pack.js <临时目录>      # 产出 webapp 运行时
-    copy /Y <临时目录> desktop\webapp
-    cd desktop
-    npm install
-    npx electron-builder --win portable --x64   # 产物在 desktop\dist\
-    ```
-- 数据目录：便携 exe 与 exe 同目录的 `data\`（绿色随身）；安装形态则存于系统用户数据目录。服务端支持 `MOESHELF_DATA_DIR` 环境变量覆盖数据位置。
+`desktop/` 提供 Electron 桌面壳：内置 Next 服务端并自带窗口渲染同一套界面，
+目标是**双击 exe 即用 —— 不需要安装 Node.js，也不会调用系统浏览器**（桌面窗口默认 1560×940，最小 1320×760）。
+
+> ⚠️ **当前版本尚未随 Release 发布 exe**，原因见[已知问题](#已知问题)。下面是可以自行构建的方式。
+
+代码仓库已配置 GitHub Actions（`.github/workflows/desktop-build.yml`）：
+
+* 推送形如 `v1.7.0` 的标签，或在 Actions 页手动运行 `Desktop exe (Windows)`，即尝试产出 `MoeShelf-<版本>-win-x64.exe` 并挂到 Release；
+* 也可本地构建（需要能联网安装依赖）：
+
+  ```bash
+  npm run build
+  node pack.js <临时目录>      # 产出 webapp 运行时
+  copy /Y <临时目录> desktop\webapp
+  cd desktop
+  npm install
+  npx electron-builder --win portable --x64   # 产物在 desktop\dist\
+  ```
+
+* 数据目录：便携 exe 与 exe 同目录的 `data\`（绿色随身）；安装形态则存于系统用户数据目录。
+  服务端支持 `MOESHELF_DATA_DIR` 环境变量覆盖数据位置。
 
 ---
 
 ## 数据与隐私
 
-Moeshelf 是一个本地收藏管理工具。
+MoeShelf 是一个本地收藏管理工具。
 
 用户数据默认保存在程序目录下的 `data/`：
 
@@ -195,10 +255,10 @@ data/
 └── location.json      # 数据目录定位
 ```
 
-首次启动 1.6.1 时会自动把旧版 `library.json / playtime.json / cache.json` 无损迁入 `moeshelf.db`，
-原 JSON 复制到 `migration-backup/` 保留；升级前请保留 `data/` 目录。
+首次启动 1.6.1 及以上版本时，会自动把旧版 `library.json / playtime.json / cache.json` 无损迁入 `moeshelf.db`，
+原 JSON 复制到 `migration-backup/` 保留；**升级前请保留 `data/` 目录**。
 
-不会将你的游戏库、游玩记录等个人数据上传到 Moeshelf 自有服务器。
+不会将你的游戏库、游玩记录等个人数据上传到 MoeShelf 自有服务器。
 
 刮削时，程序会向第三方数据源请求游戏元数据。具体数据处理方式以各数据源自身的服务条款与隐私政策为准。
 
@@ -206,7 +266,7 @@ data/
 
 ## 数据源说明
 
-Moeshelf 仅调用公开 API 获取游戏元数据，不提供或下载游戏本体、补丁等资源。
+MoeShelf 仅调用公开 API 获取游戏元数据，不提供或下载游戏本体、补丁等资源。
 
 | 来源                               | 用途                 |
 | -------------------------------- | ------------------ |
@@ -216,60 +276,98 @@ Moeshelf 仅调用公开 API 获取游戏元数据，不提供或下载游戏本
 | [CnGal](https://www.cngal.org)   | 中文标题、简介、角色         |
 | [Moyu](https://www.moyu.moe)     | 中文名、多语言简介、剧情简介     |
 
-Moyu（鲲 Galgame 补丁）是一个开源社区项目。Moeshelf 仅调用其公开 API 获取文字元数据，不下载或提供补丁资源，也未复制其代码。
+Moyu（鲲 Galgame 补丁）是一个开源社区项目。MoeShelf 仅调用其公开 API 获取文字元数据，
+不下载或提供补丁资源，也未复制其代码。
 
 ---
 
-## FAQ
+## 已知问题
+
+* **桌面版便携 exe 暂不发布**：CI 目前把 `better-sqlite3` 按 Node 22 的 ABI 编进 Electron 运行时，
+  启动会报 `NODE_MODULE_VERSION 127 vs 130`，数据库打不开（窗口能开但无数据）。
+  在打包流程为 Electron 重建原生模块之前，Release 只提供 Web 版 zip。Web 版不受影响。
+* **Web 版需要本机安装 Node.js 20+**：zip 里带了依赖，但没有内置运行时。
+  没有 Node 的电脑请照 [使用教程第 1 章](docs/使用教程.md#第-1-章--电脑上没有-node-运行环境怎么办重点) 装一次（含免安装方案）。
+* **部分 R18 条目的中文简介**需要 `v1.6.0` 及以上版本才能取到（`content_limit=all`）。
+
+---
+
+## 常见问题 FAQ
+
+### 双击 `启动.bat` 一闪而过 / 提示找不到 node？
+
+说明系统里没有 Node.js（或版本低于 20）。装一次即可，见[使用教程第 1 章](docs/使用教程.md#第-1-章--电脑上没有-node-运行环境怎么办重点)。
+
+### 浏览器打不开页面？
+
+确认那个**黑色命令行窗口还开着**（关掉窗口等于关闭服务），并检查窗口里打印的真实 URL——
+3000 被占用时程序会自动改用 3001~3019。
 
 ### 刮削失败怎么办？
 
-检查网络连接。
-
-如果配置了代理，程序会在代理不可用时自动尝试直连，并提示：
+检查网络连接。如果配置了代理，程序会在代理不可用时自动尝试直连，并提示：
 
 > 代理不可用，已尝试直连
+
+部分网络需要手动在「设置」里填写代理（例如 `http://127.0.0.1:7890`）。也可以进详情 →「更多设置 → 修正条目」手动选源。
 
 ### 中文简介没有显示怎么办？
 
 早期版本可能会缓存空结果，可以尝试：
 
-1. 打开游戏详情
-2. 点击「重新获取信息」
+1. 打开游戏详情 → 点「重新获取信息」；
+2. 或在简介旁的来源下拉里**手动指定一个源**重新抓取（1.7.0 起支持）；
+3. 也可以在「设置」中清空刮削缓存后重新获取。
 
-或者在「设置」中清空刮削缓存后重新获取。
+实在没有就点铅笔**手动写一份**，保存后不会被后续刮削覆盖。
+
+### 封面显示「加载失败」？
+
+点一下「重试」通常即可。`v1.7.0` 起程序会校验图片缓存并**自动清除坏缓存重新下载**，不需要手动清缓存。
 
 ### Moyu 提示「未找到对应条目」？
 
-请确认使用 `v1.6.0` 或更高版本。
-
-`v1.6.0` 起，Moyu 详情请求统一携带 `content_limit=all`，以兼容部分 R18 条目。
+请确认使用 `v1.6.0` 或更高版本。`v1.6.0` 起，Moyu 详情请求统一携带 `content_limit=all`，以兼容部分 R18 条目。
 
 ### 端口被占用怎么办？
 
-程序会自动尝试 `3001` 至 `3019` 端口。
-
+程序会自动尝试 `3001` 至 `3019` 端口，**以命令行窗口打印的 URL 为准**。
 如果全部被占用，请关闭占用端口的程序后重新启动。
+
+### 手机连不上？
+
+1. 右键 `开启局域网访问.bat` → **以管理员身份运行**（添加防火墙规则）；
+2. 手机与电脑连同一个 Wi-Fi；
+3. 用命令行窗口里 `Phone access (same WiFi):` 那一行的地址访问。
+
+完整排查表见[使用教程第 7 章](docs/使用教程.md#第-7-章--手机访问局域网)。
 
 ### 被杀毒软件拦截怎么办？
 
-部分安全软件可能会阻止发布版中的 `node.exe` 运行。
+部分安全软件可能会阻止 `node.exe` 运行。如果确认程序来源可信，可以把 MoeShelf 程序目录加入安全软件的信任列表。
 
-如果确认程序来源可信，可以将 Moeshelf 程序目录加入安全软件的信任列表。
+### 换电脑 / 升级版本会丢数据吗？
+
+不会。把 `data/` 目录（或整个程序目录）复制过去即可，数据无损。
 
 ---
 
 ## 项目结构
 
 ```text
-Moeshelf/
+MoeShelf/
 ├── src/
-│   ├── lib/              # 数据源与刮削逻辑
-│   └── app/              # 页面与本地 API
+│   ├── app/                  # 页面与本地 API（/api/*）
+│   ├── components/           # 界面组件（详情弹窗 / 设置 / 通用组件）
+│   └── lib/                  # 数据源、刮削、数据库、SQLite 迁移
+├── desktop/                  # Electron 桌面壳
 ├── docs/
-│   └── screenshots/      # 项目截图
-├── pack.js               # 发布版打包脚本
-├── launcher.js           # 启动器
+│   ├── 使用教程.md            # 详细使用教程（含无 Node 环境的装法）
+│   └── screenshots/          # 项目截图
+├── scripts/                  # 自检脚本（verify-sqlite）
+├── .github/workflows/        # CI（桌面版 exe 构建）
+├── pack.js                   # 发布版打包脚本
+├── launcher.js               # 启动器（选端口、拉起服务、开浏览器）
 ├── package.json
 └── README.md
 ```
@@ -284,6 +382,7 @@ Moeshelf/
 * [React](https://github.com/facebook/react) — UI 框架
 * [TypeScript](https://github.com/microsoft/TypeScript) — 开发语言
 * [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) — CSS 框架
+* [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) — SQLite 驱动
 * [undici](https://github.com/nodejs/undici) — HTTP 客户端
 * [cheerio](https://github.com/cheeriojs/cheerio) — HTML 解析
 * [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) — 二维码生成
@@ -302,7 +401,7 @@ Moeshelf/
 
 ## 免责声明
 
-Moeshelf 仅提供：
+MoeShelf 仅提供：
 
 > 本地 Galgame 收藏管理与公开元数据检索
 
